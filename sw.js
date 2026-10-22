@@ -1,5 +1,5 @@
 // Cache só do "casco" do app; dados vêm sempre do banco.
-const CACHE = 'vinek-v4';
+const CACHE = 'vinek-v5';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/supabase.js'];
 
 self.addEventListener('install', e => {

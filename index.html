@@ -136,6 +136,21 @@ main{padding:6px 16px calc(100px + env(safe-area-inset-bottom));max-width:640px;
 .spec p{margin:0;font-size:15px;line-height:1.45}
 .spec.doc{background:linear-gradient(135deg,#2a1530,#0f1318 70%);border-color:#4a2a55}
 .spec.doc .who{color:var(--gord)}
+.spec .when{margin-left:auto;font-weight:600;font-size:11px;color:var(--dim);letter-spacing:0}
+.spec.dona{background:linear-gradient(135deg,#2a2510,#0f1318 70%);border-color:#4a4220}
+.spec.dona .who{color:var(--carb)}
+.spec.play{background:linear-gradient(135deg,#2a1014,#0f1318 70%);border-color:#4a2026}
+.spec.play .who{color:var(--bad)}
+.lb{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+.check.on{border-color:var(--kcal);background:var(--kcal);color:#04140b}
+.cats.fin .c{grid-template-columns:120px 1fr 60px}
+.vid{padding:12px 0;border-top:1px solid var(--line)}
+.vid:first-of-type{border-top:0;padding-top:0}
+.etapas{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.et{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:8px 0;font-size:11px;font-weight:700;color:var(--dim)}
+.et.andamento{border-color:var(--carb);color:var(--carb);background:#ffd23f14}
+.et.feito{border-color:var(--ok);background:var(--ok);color:#04140b}
+.rp b{white-space:nowrap}
 
 /* navegação */
 nav{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:6;max-width:520px;margin:0 auto;
@@ -295,7 +310,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const vibrar = () => { try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} };
 
 // ---------- estado ----------
-const TABS = ['inicio', 'nutricao', 'treino', 'check', 'remedios', 'corpo', 'sono'];
+const TABS = ['inicio', 'nutricao', 'treino', 'check', 'remedios', 'corpo', 'sono', 'financas', 'casa', 'youtube'];
 const S = { dia: hojeISO(), tab: TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', metas: {}, fav: [], rec: [], rem: [] };
 const $ = id => document.getElementById(id);
 const view = $('view');
@@ -410,6 +425,10 @@ async function carregarDia(iso) {
     const [p, m] = await Promise.all([sb.from('peso').select('*').lte('data', iso).order('data').order('id'), sb.from('medidas_corporais').select('*').lte('data', iso).order('data').order('id')]);
     X.pesos = p.data || []; X.medidas = m.data || [];
   }
+  if (S.tab === 'financas') X.fin = await carregarFin(iso);
+  if (S.tab === 'casa') X.casaT = await carregarCasa(iso);
+  if (S.tab === 'youtube') X.yt = await carregarYt(iso);
+  if (!['inicio', 'check'].includes(S.tab)) { const r = await sb.from('app_resumos').select('*'); S.resumos = r.data || []; }
   if (S.tab === 'sono') { const r = await sb.from('sono').select('*').gte('data', addDias(iso, -13)).lte('data', iso).order('data'); X.sonos = r.data || []; }
   return X;
 }
@@ -431,7 +450,7 @@ async function render() {
   try {
     const D = await carregarDia(S.dia);
     if (id !== renderId) return;
-    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios, check: telaCheck, treino: telaTreino, corpo: telaCorpo, sono: telaSono })[S.tab](D) + '</div>';
+    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios, check: telaCheck, treino: telaTreino, corpo: telaCorpo, sono: telaSono, financas: telaFinancas, casa: telaCasa, youtube: telaYoutube })[S.tab](D) + '</div>';
     animar();
     ligarEventos(D);
     const nb = document.querySelector('nav button[data-tab="check"]'), pc = S.dia <= hojeISO() ? pendentesCheck(D) : 0;
@@ -533,7 +552,7 @@ function telaInicio(D) {
   html += `<div class="card"><h2><span class="t">${ic('list-checks')} Tarefas</span><small>${nT} pendente${nT === 1 ? '' : 's'}</small></h2>
     ${pend.map(n => `<div class="row"><button class="check" data-done="${n.id}" aria-label="Concluir">${ic('circle-check')}</button>
       <div class="grow"><div>${esc(n.texto.length > 90 ? n.texto.slice(0, 90) + '…' : n.texto)}</div>${n.prazo ? `<div class="muted">${n.prazo.slice(0, 10) < S.dia ? '<span style="color:var(--bad)">atrasada</span> · ' : ''}até ${n.prazo.slice(8, 10)}/${n.prazo.slice(5, 7)}</div>` : ''}</div></div>`).join('')}
-    ${D.casa.map(c => `<div class="row"><div class="tile" style="background:#1a2029;color:var(--muted);width:28px;height:28px;border-radius:50%">${ic('house')}</div>
+    ${D.casa.map(c => `<div class="row"><button class="check" data-casadone="${c.id}" aria-label="Feito">${ic('circle-check')}</button>
       <div class="grow"><div>${esc(c.nome)}</div><div class="muted">casa · ${esc(c.quando || c.frequencia || '')}</div></div></div>`).join('')}
     ${nT ? '' : '<p class="muted">Nada pendente. 👊</p>'}</div>`;
 
@@ -755,7 +774,7 @@ function telaTreino(D) {
   const cal = Array.isArray(plano.calistenia) ? plano.calistenia : [];
   const feito = D.treinos[0];
   const prog = lerProg();
-  let html = `<div class="card spec"><div class="who">${ic('sparkles')} PERSONAL</div><p>${resumoPersonal(D, cal, bike, feito)}</p></div>`;
+  let html = cardEsp('treino', 'PERSONAL', resumoPersonal(D, cal, bike, feito));
 
   // bike
   html += `<div class="card"><h2><span class="t">${ic('bike')} Bike</span><small>${plano.bike ? `${fmt(plano.bike.minutos)} min · alvo ${fmt(plano.bike.km_alvo, 1)} km` : ''}</small></h2>`;
@@ -957,10 +976,318 @@ function telaSono(D) {
   return html;
 }
 
+// ---------- resumo do especialista (gravado pelas rotinas em app_resumos) ----------
+function cardEsp(area, quem, local, cls = '') {
+  const r = (S.resumos || []).find(x => x.area === area);
+  const velho = r && (Date.now() - new Date(r.atualizado_em)) > 3 * 864e5;
+  const quando = r ? `${horaLocal(r.atualizado_em)} · ${rotuloData(new Date(new Date(r.atualizado_em) - 3 * 3600e3).toISOString().slice(0, 10)).d.toLowerCase()}` : '';
+  return `<div class="card spec ${cls}"><div class="who">${ic('sparkles')} ${quem}${r ? `<span class="when">${quando}</span>` : ''}</div>
+    ${r && !velho ? `<p>${esc(r.texto).replace(/\n/g, '<br>')}</p>${local ? `<p class="muted" style="margin-top:8px">${local}</p>` : ''}` : `<p>${local}</p>`}</div>`;
+}
+
+// ---------- Finanças ----------
+const brl = (v, c = 2) => (v == null || isNaN(v)) ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
+const CONTAS_RAPIDAS = [2, 1, 9, 6];
+function proxVenc(dia, iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const mk = (yy, mm) => { const ult = new Date(Date.UTC(yy, mm, 0)).getUTCDate(); return `${yy}-${pad(mm)}-${pad(Math.min(dia, ult))}`; };
+  let v = mk(y, m); if (v < iso) v = m === 12 ? mk(y + 1, 1) : mk(y, m + 1);
+  return v;
+}
+const diasEntre = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 864e5);
+async function carregarFin(iso) {
+  const ini = iso.slice(0, 8) + '01', ant = addDias(ini, -1).slice(0, 8) + '01';
+  const q = await Promise.all([
+    sb.from('fin_contas').select('*').eq('ativa', true).order('id'),
+    sb.from('fin_saldos').select('*').lte('data', iso).order('data', { ascending: false }),
+    sb.from('fin_categorias').select('*').eq('ativa', true).order('id'),
+    sb.from('fin_contas_fixas').select('*').eq('ativa', true).order('dia_vencimento'),
+    sb.from('fin_dividas').select('*').neq('status', 'quitada').order('id'),
+    sb.from('fin_transacoes').select('*').gte('data', ant).lte('data', addDias(iso.slice(0, 8) + '28', 4)).order('data', { ascending: false }).order('id', { ascending: false }),
+  ]);
+  const bad = q.find(x => x.error); if (bad) throw bad.error;
+  const [contas, saldos, cats, fixas, dividas, tx] = q.map(x => x.data);
+  const mes = iso.slice(0, 7), mesAnt = ant.slice(0, 7);
+  return { contas, saldos, cats, fixas, dividas, tx: tx.filter(t => t.data.slice(0, 7) === mes), txAnt: tx.filter(t => t.data.slice(0, 7) === mesAnt) };
+}
+function telaFinancas(D) {
+  const F = D.fin, cat = id => (F.cats.find(c => c.id === id) || {}).nome || 'sem categoria';
+  const ult = {}; F.saldos.forEach(s => { if (!ult[s.conta_id]) ult[s.conta_id] = s; });
+  const comSaldo = F.contas.filter(c => c.tipo !== 'cartao_credito' && ult[c.id]);
+  const patr = comSaldo.reduce((a, c) => a + +ult[c.id].saldo, 0);
+  const gastos = F.tx.filter(t => t.natureza === 'despesa'), gastoMes = -gastos.reduce((a, t) => a + +t.valor, 0);
+  const estornos = F.tx.filter(t => t.natureza === 'estorno').reduce((a, t) => a + +t.valor, 0);
+  const receitas = F.tx.filter(t => t.natureza === 'receita').reduce((a, t) => a + +t.valor, 0);
+  const gastoAnt = -F.txAnt.filter(t => t.natureza === 'despesa').reduce((a, t) => a + +t.valor, 0);
+  const porCat = {}; gastos.forEach(t => { const k = cat(t.categoria_id); porCat[k] = (porCat[k] || 0) - +t.valor; });
+  const porCatAnt = {}; F.txAnt.filter(t => t.natureza === 'despesa').forEach(t => { const k = cat(t.categoria_id); porCatAnt[k] = (porCatAnt[k] || 0) - +t.valor; });
+  const top = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+  const maxCat = top.length ? top[0][1] : 1;
+  const venc = F.fixas.map(f => ({ ...f, v: proxVenc(f.dia_vencimento, S.dia) })).map(f => ({ ...f, em: diasEntre(S.dia, f.v) })).filter(f => f.em <= 10).sort((a, b) => a.em - b.em);
+  const nomeMes = new Date(S.dia + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'long', timeZone: 'UTC' });
+
+  let html = cardEsp('financas', 'FIN', resumoFin(gastoMes, gastoAnt, venc, receitas));
+  html += `<div class="card score" style="--glow:#3cf28a22"><h2><span class="t">${ic('wallet')} Patrimônio</span><small>toque numa conta para atualizar</small></h2>
+    <div style="font-size:38px;font-weight:900;letter-spacing:-.03em;color:var(--kcal)" class="num">${brl(patr, 0)}</div>
+    ${comSaldo.sort((a, b) => ult[b.id].saldo - ult[a.id].saldo).map(c => `<button class="rp" data-saldo="${c.id}"><span>${esc(c.apelido)}<div class="muted">atualizado ${ult[c.id].data.slice(8, 10)}/${ult[c.id].data.slice(5, 7)}</div></span><b class="num">${brl(ult[c.id].saldo)}</b></button>`).join('')}
+    <button class="link" id="btnOutraConta">atualizar outra conta</button></div>`;
+
+  html += `<div class="card"><h2><span class="t">${ic('chart-line')} ${nomeMes}</span><small>mês anterior: ${brl(gastoAnt, 0)}</small></h2>
+    <div class="stats" style="margin-top:0"><div class="stat"><div class="k">Gastos</div><div class="v num" style="color:var(--prot)">${brl(gastoMes - estornos, 0)}</div></div>
+    <div class="stat"><div class="k">Entradas</div><div class="v num" style="color:var(--kcal)">${brl(receitas, 0)}</div></div></div>
+    <div class="cats fin">${top.slice(0, 8).map(([k, v]) => `<div class="c"><span>${esc(k)}</span><div class="track"><i style="background:var(--prot)" data-w="${v / maxCat * 100}%"></i></div><b>${fmt(v)}</b></div>`).join('') || '<p class="muted">Nenhum gasto lançado neste mês.</p>'}</div>
+    ${estornos ? `<p class="muted">Estornos de ${brl(estornos)} já descontados do total.</p>` : ''}</div>`;
+
+  html += `<div class="card"><h2><span class="t">${ic('calendar')} Vence em 10 dias</span></h2>${venc.length ? venc.map(f => `<div class="row"><div class="grow"><div class="title">${esc(f.nome)}</div><div class="muted">dia ${f.dia_vencimento}${f.parcelas_restantes ? ` · ${f.parcelas_restantes} parcelas restantes` : ''}</div></div>
+    <b class="num">${f.valor_estimado ? brl(f.valor_estimado) : 'fatura'}</b><span class="chip ${f.em <= 2 ? 'bad' : f.em <= 5 ? 'warn' : ''}">${f.em === 0 ? 'hoje' : f.em === 1 ? 'amanhã' : 'em ' + f.em + ' dias'}</span></div>`).join('') : '<p class="muted">Nada vence nos próximos 10 dias.</p>'}</div>`;
+
+  html += `<div class="card"><h2><span class="t">${ic('plus')} Lançar</span></h2><form id="fGasto">
+    <div class="opts" id="gTipo"><button type="button" class="opt sel" data-gtipo="despesa">Gasto</button><button type="button" class="opt" data-gtipo="receita">Entrada</button></div>
+    <div class="two"><div><label>Valor (R$)</label><input id="gVal" inputmode="decimal" required placeholder="0,00"></div><div><label>Data</label><input id="gData" type="date" value="${S.dia}"></div></div>
+    <label>Descrição</label><input id="gDesc" required placeholder="ex.: lanche no posto">
+    <label>Conta</label><div class="opts" id="gConta">${CONTAS_RAPIDAS.map((id, i) => F.contas.find(c => c.id === id)).filter(Boolean).map((c, i) => `<button type="button" class="opt ${i === 0 ? 'sel' : ''}" data-gconta="${c.id}">${esc(c.apelido)}</button>`).join('')}</div>
+    <label>Categoria</label><div class="opts" id="gCat">${F.cats.filter(c => c.tipo === 'despesa').map(c => `<button type="button" class="opt" data-gcat="${c.id}" data-ct="despesa">${esc(c.nome.toLowerCase())}</button>`).join('')}${F.cats.filter(c => c.tipo === 'receita').map(c => `<button type="button" class="opt hidden" data-gcat="${c.id}" data-ct="receita">${esc(c.nome.toLowerCase())}</button>`).join('')}</div>
+    <p class="muted">Quando você mandar o extrato do mês, o FIN junta com o que foi lançado aqui (não duplica).</p>
+    <button class="btn" type="submit" style="width:100%;margin-top:6px">Salvar</button></form></div>`;
+
+  if (F.dividas.length) html += `<div class="card"><h2><span class="t">${ic('target')} Dívidas</span></h2>${F.dividas.map(d => {
+    const pago = d.valor_original && d.saldo_atual != null ? Math.max(0, 1 - d.saldo_atual / d.valor_original) : null;
+    return `<div class="slim" style="margin-bottom:12px"><div class="top"><span>${esc(d.credor)}</span><span class="num"><b>${d.saldo_atual != null ? brl(d.saldo_atual, 0) : esc(d.status)}</b>${d.valor_parcela ? ` <span class="muted">· ${brl(d.valor_parcela, 0)}/mês</span>` : ''}</span></div>
+      ${pago != null ? `<div class="track"><i style="background:var(--kcal)" data-w="${pago * 100}%"></i></div><div class="muted" style="margin-top:3px">${fmt(pago * 100)}% pago</div>` : ''}</div>`;
+  }).join('')}</div>`;
+
+  html += `<div class="card"><h2><span class="t">Lançamentos do mês</span><small>${F.tx.length}</small></h2>${F.tx.filter(t => !['transferencia_propria', 'aplicacao', 'resgate', 'pagamento_fatura'].includes(t.natureza)).slice(0, 15).map(t => `<div class="row"><div class="grow"><div class="title">${esc(t.descricao || t.descricao_original || t.natureza)}</div>
+    <div class="muted">${t.data.slice(8, 10)}/${t.data.slice(5, 7)} · ${esc(t.categoria_id ? cat(t.categoria_id).toLowerCase() : t.natureza)} · ${esc((F.contas.find(c => c.id === t.conta_id) || {}).apelido || '')}</div></div>
+    <b class="num" style="color:${+t.valor > 0 ? 'var(--kcal)' : 'inherit'}">${brl(t.valor)}</b>${t.obs === 'registrado pelo app' ? `<button class="x" data-deltx="${t.id}" aria-label="Apagar">${ic('x')}</button>` : ''}</div>`).join('') || '<p class="muted">Nada lançado.</p>'}</div>`;
+  return html;
+}
+function resumoFin(g, gAnt, venc, rec) {
+  const urg = venc.filter(f => f.em <= 2);
+  const p = [];
+  if (urg.length) p.push(`Atenção: <b>${urg.map(f => esc(f.nome)).join(', ')}</b> vence${urg.length > 1 ? 'm' : ''} ${urg[0].em === 0 ? 'hoje' : 'em ' + urg[0].em + ' dia' + (urg[0].em > 1 ? 's' : '')}.`);
+  if (gAnt) { const pr = g / gAnt; p.push(`Gastos do mês em ${brl(g, 0)}, ${fmt(pr * 100)}% do mês passado inteiro.`); }
+  else p.push(`Gastos do mês em ${brl(g, 0)}.`);
+  if (rec && g > rec) p.push('Saiu mais do que entrou até agora.');
+  return p.join(' ');
+}
+async function salvarSaldo(contaId, F) {
+  const c = F.contas.find(x => x.id === contaId);
+  const v = prompt(`Saldo atual de ${c.apelido} (R$):`); if (v == null) return;
+  const n = parseFloat(v.replace(/\./g, '').replace(',', '.')); if (isNaN(n)) return toast('Valor inválido');
+  const { error } = await sb.from('fin_saldos').upsert({ conta_id: contaId, data: S.dia, saldo: n, origem: 'app' }, { onConflict: 'conta_id,data' });
+  if (error) return erro(error); toast(`✓ ${c.apelido}: ${brl(n)}`); render();
+}
+function abrirOutraConta(F) {
+  $('shTitle').textContent = 'Atualizar saldo';
+  $('shBody').innerHTML = F.contas.filter(c => c.tipo !== 'cartao_credito').map(c => `<button class="rp" data-sc="${c.id}"><span>${esc(c.apelido)}</span><span class="muted">${esc(c.tipo)}</span></button>`).join('');
+  $('sheet').classList.remove('hidden');
+  $('shBody').querySelectorAll('[data-sc]').forEach(b => b.onclick = () => { $('sheet').classList.add('hidden'); salvarSaldo(+b.dataset.sc, F); });
+}
+function ligarFin(D) {
+  const F = D.fin; if (!F) return;
+  view.querySelectorAll('[data-saldo]').forEach(b => b.onclick = () => salvarSaldo(+b.dataset.saldo, F));
+  if ($('btnOutraConta')) $('btnOutraConta').onclick = () => abrirOutraConta(F);
+  const sel = (box, el) => { box.querySelectorAll('.opt').forEach(x => x.classList.toggle('sel', x === el)); vibrar(); };
+  view.querySelectorAll('[data-gtipo]').forEach(b => b.onclick = () => {
+    sel($('gTipo'), b); view.querySelectorAll('[data-gcat]').forEach(x => { x.classList.toggle('hidden', x.dataset.ct !== b.dataset.gtipo); x.classList.remove('sel'); });
+  });
+  view.querySelectorAll('[data-gconta]').forEach(b => b.onclick = () => sel($('gConta'), b));
+  view.querySelectorAll('[data-gcat]').forEach(b => b.onclick = () => sel($('gCat'), b));
+  view.querySelectorAll('[data-deltx]').forEach(b => b.onclick = async () => {
+    if (!confirm('Apagar este lançamento?')) return;
+    const { error } = await sb.from('fin_transacoes').delete().eq('id', b.dataset.deltx); error ? erro(error) : render();
+  });
+  const f = $('fGasto'); if (!f) return;
+  f.onsubmit = async e => {
+    e.preventDefault(); vibrar();
+    const tipo = view.querySelector('[data-gtipo].sel').dataset.gtipo;
+    const v = parseFloat($('gVal').value.replace(/\./g, '').replace(',', '.'));
+    if (!(v > 0)) return toast('Digite o valor');
+    const c = view.querySelector('[data-gconta].sel'), k = view.querySelector('[data-gcat].sel');
+    if (!k) return toast('Escolha a categoria');
+    const desc = $('gDesc').value.trim();
+    const row = { data: $('gData').value || S.dia, conta_id: c ? +c.dataset.gconta : 2, valor: tipo === 'despesa' ? -v : v, natureza: tipo, categoria_id: +k.dataset.gcat,
+      descricao: desc, descricao_original: desc, origem: 'mensagem', revisado: false, recorrencia: 'não recorrente', obs: 'registrado pelo app' };
+    const { data, error } = await sb.from('fin_transacoes').insert(row).select('id').single();
+    if (error) return erro(error);
+    toast(`✓ ${tipo === 'despesa' ? 'Gasto' : 'Entrada'} de ${brl(v)} salvo`, () => sb.from('fin_transacoes').delete().eq('id', data.id));
+    render();
+  };
+}
+
+// ---------- Casa ----------
+function primeiroSabado(y, m) { const d = new Date(Date.UTC(y, m - 1, 1)); const off = (6 - d.getUTCDay() + 7) % 7; return `${y}-${pad(m)}-${pad(1 + off)}`; }
+function proximaCasa(t, iso) {
+  const f = (t.frequencia || '').toLowerCase();
+  const wd = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'].findIndex(n => (t.quando || '').toLowerCase().startsWith(n));
+  const prox = () => { let d = addDias(iso, 1); while (new Date(d + 'T12:00:00Z').getUTCDay() !== wd) d = addDias(d, 1); return d; };
+  if (f.startsWith('semanal')) return wd >= 0 ? prox() : addDias(iso, 7);
+  if (f.startsWith('quinzenal')) return wd >= 0 ? addDias(prox(), 7) : addDias(iso, 14);
+  if (f.startsWith('mensal')) {
+    const [y, m] = iso.split('-').map(Number), ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
+    return /1º sábado/i.test(t.quando || '') ? primeiroSabado(ny, nm) : `${ny}-${pad(nm)}-${iso.slice(8, 10)}`;
+  }
+  return null; // diária / 2x por semana: sem data fixa
+}
+const casaFeitaHoje = (t, iso) => t.ultima_feita === iso;
+const casaDevida = (t, iso) => !casaFeitaHoje(t, iso) && (t.proxima ? t.proxima <= iso : /diária/i.test(t.frequencia || '') || /2x/i.test(t.frequencia || '') && casaDiaDoLixo(t, iso));
+function casaDiaDoLixo(t, iso) { const wd = new Date(iso + 'T12:00:00Z').getUTCDay(); return /segunda e quinta/i.test(t.quando || '') ? wd === 1 || wd === 4 : true; }
+async function concluirCasa(id, tarefas, btn) {
+  const t = tarefas.find(x => x.id === id); if (!t) return;
+  vibrar(); if (btn) { btn.style.borderColor = 'var(--kcal)'; btn.style.color = 'var(--kcal)'; }
+  const antes = { ultima_feita: t.ultima_feita, proxima: t.proxima };
+  const nova = proximaCasa(t, S.dia);
+  const { error } = await sb.from('casa_tarefas').update({ ultima_feita: S.dia, ...(nova ? { proxima: nova } : {}) }).eq('id', id);
+  if (error) return erro(error);
+  toast(`✓ ${t.nome}${nova ? ' · próxima ' + nova.slice(8, 10) + '/' + nova.slice(5, 7) : ''}`, () => sb.from('casa_tarefas').update(antes).eq('id', id));
+  setTimeout(render, 300);
+}
+async function carregarCasa(iso) {
+  const q = await Promise.all([
+    sb.from('casa_tarefas').select('*').eq('ativo', true).order('proxima', { nullsFirst: true }),
+    sb.from('notas').select('*').eq('tipo', 'ajuste_casa').eq('concluido', false).order('id'),
+    sb.from('vw_lista_compras').select('*'),
+    sb.from('despensa').select('id,quantidade,unidade,local,validade,fin_produtos(nome)').gt('quantidade', 0).not('validade', 'is', null).lte('validade', addDias(iso, 10)).order('validade'),
+  ]);
+  const bad = q.find(x => x.error); if (bad) throw bad.error;
+  const [tarefas, ajustes, lista, vence] = q.map(x => x.data);
+  return { tarefas, ajustes, lista, vence };
+}
+function telaCasa(D) {
+  const C = D.casaT, iso = S.dia;
+  const devidas = C.tarefas.filter(t => casaDevida(t, iso)), feitas = C.tarefas.filter(t => casaFeitaHoje(t, iso));
+  const prox = C.tarefas.filter(t => t.proxima && t.proxima > iso && !casaFeitaHoje(t, iso)).sort((a, b) => a.proxima < b.proxima ? -1 : 1);
+  const linha = t => `<div class="row"><button class="check" data-casadone="${t.id}" aria-label="Feito">${ic('circle-check')}</button><div class="grow"><div class="title">${esc(t.nome)}</div>
+    <div class="muted">${t.proxima && t.proxima < iso ? `<span style="color:var(--bad)">atrasada desde ${t.proxima.slice(8, 10)}/${t.proxima.slice(5, 7)}</span> · ` : ''}${esc(t.quando || t.frequencia || '')}</div></div></div>`;
+  let html = cardEsp('casa', 'DONA', resumoDona(devidas, C), 'dona');
+  html += `<div class="card"><h2><span class="t">${ic('house')} Para ${iso === hojeISO() ? 'hoje' : 'este dia'}</span><small>${feitas.length}/${feitas.length + devidas.length}</small></h2>
+    ${devidas.map(linha).join('')}
+    ${feitas.map(t => `<div class="row"><div class="tile" style="background:#3cf28a1f;color:var(--ok);width:28px;height:28px;border-radius:50%">${ic('circle-check')}</div><div class="grow muted">${esc(t.nome)}</div><span class="chip ok">feito</span></div>`).join('')}
+    ${devidas.length + feitas.length ? '' : '<p class="muted">Nada da casa para este dia.</p>'}</div>`;
+  html += `<div class="card"><h2><span class="t">${ic('calendar')} Próximas</span></h2>${prox.map(t => `<div class="row"><div class="grow"><div class="title">${esc(t.nome)}</div><div class="muted">${esc(t.quando || '')}</div></div>
+    <span class="chip">${t.proxima.slice(8, 10)}/${t.proxima.slice(5, 7)}</span><button class="x" data-casadone="${t.id}" aria-label="Fiz antes">${ic('circle-check')}</button></div>`).join('') || '<p class="muted">Nada agendado.</p>'}</div>`;
+  html += `<div class="card"><h2><span class="t">${ic('zap')} Ajustes da casa</span><small>${C.ajustes.length}</small></h2>
+    ${C.ajustes.map(n => `<div class="row"><button class="check" data-done="${n.id}" aria-label="Concluir">${ic('circle-check')}</button><div class="grow">${esc(n.texto)}</div></div>`).join('')}
+    <div class="inl"><input id="ajTxt" placeholder="novo ajuste (ex.: trocar lâmpada)"><button class="btn small" id="ajAdd">${ic('plus')}</button></div></div>`;
+  html += `<div class="card"><h2><span class="t">${ic('list-checks')} Lista de compras</span><small>${C.lista.length} itens</small></h2>${C.lista.map(l => `<div class="row"><div class="grow"><div class="title">${esc(l.nome)}</div>${l.obs ? `<div class="muted">${esc(l.obs.length > 80 ? l.obs.slice(0, 80) + '…' : l.obs)}</div>` : ''}</div>
+    <span class="chip ${l.motivo === 'acabou' || l.quantidade == 0 ? 'bad' : 'warn'}">${esc(l.motivo || '')}</span></div>`).join('') || '<p class="muted">Nada para comprar.</p>'}</div>`;
+  if (C.vence.length) html += `<div class="card"><h2><span class="t">Vence em breve</span><small>despensa</small></h2>${C.vence.map(v => `<div class="row"><div class="grow"><div class="title">${esc((v.fin_produtos || {}).nome || 'item')}</div><div class="muted">${esc(v.local || '')} · ${fmt(v.quantidade, 2)} ${esc(v.unidade || '')}</div></div>
+    <span class="chip ${v.validade < iso ? 'bad' : 'warn'}">${v.validade < iso ? 'venceu' : 'vence'} ${v.validade.slice(8, 10)}/${v.validade.slice(5, 7)}</span></div>`).join('')}</div>`;
+  return html;
+}
+function resumoDona(devidas, C) {
+  const atr = devidas.filter(t => t.proxima && t.proxima < S.dia);
+  if (atr.length) return `Tem <b>${atr.length} tarefa${atr.length > 1 ? 's' : ''} atrasada${atr.length > 1 ? 's' : ''}</b>: ${atr.map(t => esc(t.nome.toLowerCase())).join(', ')}. Resolva a menor primeiro.`;
+  if (devidas.length) return `Hoje: ${devidas.map(t => esc(t.nome.toLowerCase())).join(', ')}. Toque no círculo quando fizer.`;
+  return `Casa em dia.${C.lista.length ? ` Lista de compras com ${C.lista.length} itens.` : ''}`;
+}
+function ligarCasa(D) {
+  const tarefas = (D.casaT && D.casaT.tarefas) || D.casa || [];
+  view.querySelectorAll('[data-casadone]').forEach(b => b.onclick = () => concluirCasa(+b.dataset.casadone, tarefas, b));
+  const add = $('ajAdd'); if (add) add.onclick = async () => {
+    const t = $('ajTxt').value.trim(); if (!t) return;
+    const { error } = await sb.from('notas').insert({ tipo: 'ajuste_casa', texto: t, concluido: false }); if (error) return erro(error);
+    toast('✓ Ajuste anotado'); render();
+  };
+}
+
+// ---------- YouTube ----------
+const ETAPAS = [['roteiro', 'Roteiro'], ['gravacao', 'Gravação'], ['edicao', 'Edição'], ['thumb_titulo', 'Thumb'], ['publicacao', 'Publicar']];
+const ETAPA_PROX = { pendente: 'andamento', andamento: 'feito', feito: 'pendente' };
+const TRAB_ETAPAS = ['ideias', 'roteiro', 'gravação', 'edição', 'thumb', 'publicação', 'estudo'];
+async function carregarYt(iso) {
+  const seg = segundaDe(iso);
+  const q = await Promise.all([
+    sb.from('play_videos').select('*').order('publicar_em', { nullsFirst: false }),
+    sb.from('play_metas').select('*').order('prazo', { nullsFirst: false }),
+    sb.from('play_trabalho').select('*').gte('data', addDias(seg, -7)).lte('data', addDias(seg, 6)).order('data'),
+    sb.from('play_metricas').select('*').order('data', { ascending: false }).limit(1),
+  ]);
+  const bad = q.find(x => x.error); if (bad) throw bad.error;
+  const [videos, metas, trab, met] = q.map(x => x.data);
+  return { videos, metas, trab, met: met[0] || null, seg };
+}
+function telaYoutube(D) {
+  const Y = D.yt, hoje = Y.trab.find(t => t.data === S.dia);
+  const sem = []; for (let i = 0; i < 7; i++) { const dd = addDias(Y.seg, i); sem.push({ dd, t: Y.trab.find(x => x.data === dd) }); }
+  const diasSem = sem.filter(x => x.t && x.t.minutos > 0).length, minSem = sem.reduce((a, x) => a + (x.t ? +x.t.minutos || 0 : 0), 0);
+  const ativos = Y.videos.filter(v => !v.publicado_em), pub = Y.videos.filter(v => v.publicado_em);
+  const maxMin = Math.max(60, ...sem.map(x => x.t ? +x.t.minutos || 0 : 0));
+  let html = cardEsp('youtube', 'PLAY', resumoPlay(Y, ativos, diasSem, hoje), 'play');
+  html += `<div class="card score" style="--glow:#ff4d5e22"><h2><span class="t">${ic('youtube')} Semana no canal</span><small>meta: 5 dias</small></h2>
+    <div class="stats" style="margin-top:0"><div class="stat"><div class="k">Dias trabalhados</div><div class="v num" style="color:${diasSem >= 5 ? 'var(--ok)' : 'var(--ink)'}">${diasSem}/5</div></div>
+    <div class="stat"><div class="k">Minutos</div><div class="v num">${fmt(minSem)}</div></div></div>
+    <div class="spark">${sem.map(({ dd, t }) => { const m = t ? +t.minutos || 0 : 0; return `<div class="${dd === S.dia ? 'cur' : ''}"><em>${m || ''}</em><i style="height:0;background:${m ? '#ff4d5e' : '#1a2029'}" data-h="${m ? m / maxMin * 100 : 3}%"></i><span>${'DSTQQSS'[new Date(dd + 'T12:00:00Z').getUTCDay()]}</span></div>`; }).join('')}</div></div>`;
+  html += `<div class="card"><h2><span class="t">${ic('timer')} Trabalho ${S.dia === hojeISO() ? 'de hoje' : 'do dia'}</span>${hoje ? `<small>${hoje.minutos} min salvos</small>` : ''}</h2>
+    <label class="lb">O que fez</label><div class="opts" id="ytEt">${TRAB_ETAPAS.map(e => `<button class="opt ${hoje && (hoje.etapas || '').includes(e) ? 'sel' : ''}" data-yte="${e}">${e}</button>`).join('')}</div>
+    <label class="lb">Quanto tempo (toque para salvar)</label><div class="opts">${[15, 30, 45, 60, 90, 120].map(m => `<button class="opt ${hoje && +hoje.minutos === m ? 'sel' : ''}" data-ytmin="${m}">${m} min</button>`).join('')}</div>
+    ${!hoje || hoje.minutos ? `<button class="link" data-ytmin="0">hoje não trabalhei no canal</button>` : ''}</div>`;
+  html += `<div class="card"><h2><span class="t">${ic('video')} Vídeos em produção</span><small>toque na etapa</small></h2>${ativos.map(v => {
+    const em = v.publicar_em ? diasEntre(S.dia, v.publicar_em) : null, ok = ETAPAS.filter(([k]) => v[k] === 'feito').length;
+    return `<div class="vid"><div class="row" style="padding:0 0 8px"><div class="grow"><div class="title">${esc(v.titulo)}</div><div class="muted">${v.publicar_em ? `publicar ${v.publicar_em.slice(8, 10)}/${v.publicar_em.slice(5, 7)}` : 'sem data'} · ${ok}/5 etapas</div></div>
+      ${em != null ? `<span class="chip ${em < 0 ? 'bad' : em <= 3 ? 'warn' : ''}">${em < 0 ? 'atrasado' : em === 0 ? 'hoje' : 'faltam ' + em + 'd'}</span>` : ''}</div>
+      <div class="etapas">${ETAPAS.map(([k, n]) => `<button class="et ${v[k] || 'pendente'}" data-vid="${v.id}" data-et="${k}" data-st="${v[k] || 'pendente'}">${n}</button>`).join('')}</div>
+      ${ok === 5 ? `<button class="btn small" style="margin-top:8px" data-publicado="${v.id}">Marcar como publicado</button>` : ''}</div>`;
+  }).join('') || '<p class="muted">Nenhum vídeo em produção.</p>'}
+    <div class="inl"><input id="vTit" placeholder="novo vídeo (título)"><input id="vData" type="date" style="flex:0 0 150px"><button class="btn small" id="vAdd">${ic('plus')}</button></div>
+    ${pub.length ? `<div class="sub">Publicados · ${pub.length}</div>${pub.slice(-5).reverse().map(v => `<div class="row"><div class="grow">${esc(v.titulo)}</div><span class="muted">${v.publicado_em.slice(8, 10)}/${v.publicado_em.slice(5, 7)}</span></div>`).join('')}` : ''}</div>`;
+  html += `<div class="card"><h2><span class="t">${ic('trophy')} Metas do canal</span><small>${Y.metas.filter(m => m.concluida).length}/${Y.metas.length}</small></h2>${Y.metas.map(m => `<div class="row"><button class="check ${m.concluida ? 'on' : ''}" data-ytmeta="${m.id}" data-c="${m.concluida ? 1 : 0}" aria-label="Concluir">${ic('circle-check')}</button>
+    <div class="grow"><div style="${m.concluida ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(m.meta)}</div><div class="muted">${esc(m.tipo || '')}${m.prazo ? ' · até ' + m.prazo.slice(8, 10) + '/' + m.prazo.slice(5, 7) : ''}</div></div></div>`).join('')}</div>`;
+  const M = Y.met;
+  html += `<div class="card"><h2><span class="t">${ic('chart-line')} Números</span>${M ? `<small>${M.data.slice(8, 10)}/${M.data.slice(5, 7)}</small>` : ''}</h2>${M ? `<div class="stats" style="margin-top:0">
+    <div class="stat"><div class="k">Inscritos</div><div class="v num">${fmt(M.inscritos)}</div></div><div class="stat"><div class="k">Visualizações</div><div class="v num">${fmt(M.visualizacoes)}</div></div>
+    <div class="stat"><div class="k">CTR</div><div class="v num">${M.ctr_pct != null ? fmt(M.ctr_pct, 1) + '%' : '—'}</div></div><div class="stat"><div class="k">Retenção</div><div class="v num">${M.retencao_media_pct != null ? fmt(M.retencao_media_pct, 0) + '%' : '—'}</div></div></div>`
+    : '<p class="muted">Ainda sem números. Depois do primeiro vídeo, mande um print do YouTube Studio no chat.</p>'}</div>`;
+  return html;
+}
+function resumoPlay(Y, ativos, diasSem, hoje) {
+  const v = ativos[0];
+  const p = [];
+  if (v) {
+    const falta = ETAPAS.filter(([k]) => v[k] !== 'feito'), em = v.publicar_em ? diasEntre(S.dia, v.publicar_em) : null;
+    if (falta.length) p.push(`"${esc(v.titulo)}"${em != null ? ` sai em ${em} dia${em === 1 ? '' : 's'}` : ''}: próxima etapa é <b>${falta[0][1].toLowerCase()}</b>.`);
+    else p.push(`"${esc(v.titulo)}" está pronto. Publique!`);
+  } else p.push('Nenhum vídeo em produção. Escolha o próximo tema.');
+  p.push(diasSem >= 5 ? 'Meta de 5 dias na semana batida 🔥' : `${diasSem}/5 dias na semana.`);
+  if (S.dia === hojeISO() && !hoje) p.push('Hoje ainda não registrou trabalho no canal.');
+  return p.join(' ');
+}
+function ligarYt(D) {
+  if (!D.yt) return;
+  view.querySelectorAll('[data-yte]').forEach(b => b.onclick = () => { b.classList.toggle('sel'); vibrar(); });
+  view.querySelectorAll('[data-ytmin]').forEach(b => b.onclick = async () => {
+    const min = +b.dataset.ytmin, et = [...view.querySelectorAll('[data-yte].sel')].map(x => x.dataset.yte).join(', ');
+    if (min && !et) return toast('Marque o que fez primeiro');
+    vibrar();
+    const { error } = await sb.from('play_trabalho').upsert({ data: S.dia, minutos: min, etapas: min ? et : null, observacao: min ? 'registrado pelo app' : 'não trabalhou (app)' }, { onConflict: 'data' });
+    if (error) return erro(error); toast(min ? `✓ ${min} min no canal` : '✓ Anotado'); render();
+  });
+  view.querySelectorAll('[data-et]').forEach(b => b.onclick = async () => {
+    const novo = ETAPA_PROX[b.dataset.st] || 'andamento'; vibrar();
+    b.className = 'et ' + novo; b.dataset.st = novo;
+    const { error } = await sb.from('play_videos').update({ [b.dataset.et]: novo }).eq('id', b.dataset.vid);
+    if (error) return erro(error); setTimeout(render, 600);
+  });
+  view.querySelectorAll('[data-publicado]').forEach(b => b.onclick = async () => {
+    const id = +b.dataset.publicado;
+    const { error } = await sb.from('play_videos').update({ publicado_em: S.dia }).eq('id', id); if (error) return erro(error);
+    toast('🎉 Vídeo publicado!', () => sb.from('play_videos').update({ publicado_em: null }).eq('id', id)); render();
+  });
+  view.querySelectorAll('[data-ytmeta]').forEach(b => b.onclick = async () => {
+    const { error } = await sb.from('play_metas').update({ concluida: b.dataset.c !== '1' }).eq('id', b.dataset.ytmeta); error ? erro(error) : render();
+  });
+  const add = $('vAdd'); if (add) add.onclick = async () => {
+    const t = $('vTit').value.trim(); if (!t) return toast('Digite o título');
+    const row = { titulo: t, publicar_em: $('vData').value || null }; ETAPAS.forEach(([k]) => row[k] = 'pendente');
+    const { error } = await sb.from('play_videos').insert(row); if (error) return erro(error); toast('✓ Vídeo adicionado'); render();
+  };
+}
+
 // ---------- menu "Mais" ----------
 function abrirMais() {
-  const it = [['remedios', 'pill', 'Remédios', 'var(--gord)'], ['corpo', 'scale', 'Peso e medidas', 'var(--agua)'], ['sono', 'moon', 'Sono', 'var(--gord)']];
-  const breve = [['wallet', 'Finanças'], ['house', 'Casa'], ['youtube', 'YouTube']];
+  const it = [['remedios', 'pill', 'Remédios', 'var(--gord)'], ['corpo', 'scale', 'Peso e medidas', 'var(--agua)'], ['sono', 'moon', 'Sono', 'var(--gord)'],
+    ['financas', 'wallet', 'Finanças', 'var(--kcal)'], ['casa', 'house', 'Casa', 'var(--carb)'], ['youtube', 'youtube', 'YouTube', 'var(--bad)']];
+  const breve = [];
   $('shTitle').textContent = 'Mais';
   $('shBody').innerHTML = `<div class="grid">${it.map(([t, i, n, c]) => `<button class="qb" data-mais="${t}"><div class="ic" style="background:#ffffff0d;color:${c}">${ic(i)}</div><div class="n">${n}</div></button>`).join('')}
     ${breve.map(([i, n]) => `<div class="qb" style="opacity:.4"><div class="ic">${ic(i)}</div><div class="n">${n}</div><div class="k">em breve</div></div>`).join('')}</div>`;
@@ -995,7 +1322,7 @@ function telaNutricao(D) {
   const favQuick = QUICK_FAV.map(a => S.fav.find(f => f.apelido === a)).filter(Boolean);
   const favOutras = S.fav.filter(f => !QUICK_FAV.includes(f.apelido));
   const recs = S.rec.filter(r => r.apelido !== 'caneca do serviço');
-  let html = `<div class="card spec"><div class="who">${ic('sparkles')} NUTRI</div><p>${resumoNutri(t)}</p></div>`;
+  let html = cardEsp('nutricao', 'NUTRI', resumoNutri(t));
   html += `<div class="card"><h2><span class="t">Macros do dia</span></h2><div class="minis">
     ${miniAnel(t.kcal, M.kcal, '#3cf28a', 'kcal', '')}${miniAnel(t.p, M.p, '#ff7a2f', 'Prot', 'g')}
     ${miniAnel(t.c, M.c, '#ffd23f', 'Carb', 'g')}${miniAnel(t.g, M.g, '#c86bff', 'Gord', 'g')}</div></div>`;
@@ -1103,7 +1430,7 @@ $('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').classList.ad
 // ---------- Remédios ----------
 function telaRemedios(D) {
   const linhas = statusRemedios(D);
-  let html = `<div class="card spec doc"><div class="who">${ic('sparkles')} DOUTOR</div><p>${resumoDoutor()}</p></div>`;
+  let html = cardEsp('remedios', 'DOUTOR', resumoDoutor(), 'doc');
   html += `<div class="card"><h2><span class="t">${ic('pill')} Doses do dia</span><small>${linhas.filter(l => l.log && l.log.status === 'tomado').length}/${linhas.length} tomadas</small></h2>
   ${linhas.map((l, i) => `<div class="row">
     <div class="tile" style="background:${l.log && l.log.status === 'tomado' ? '#3cf28a1f' : '#c86bff1a'};color:${l.log && l.log.status === 'tomado' ? 'var(--ok)' : 'var(--gord)'}">${ic(l.log && l.log.status === 'tomado' ? 'circle-check' : 'pill')}</div>
@@ -1199,6 +1526,7 @@ function ligarEventos(D) {
     await desfazerDose(+b.dataset.dellog, +b.dataset.rem, b.dataset.st); render();
   });
   const br = $('btnRepetir'); if (br) br.onclick = abrirRepetir;
+  ligarFin(D); ligarCasa(D); ligarYt(D);
   view.querySelectorAll('[data-besf]').forEach(b => b.onclick = () => salvarBike(+b.dataset.besf));
   view.querySelectorAll('[data-tesf]').forEach(b => b.onclick = () => salvarTreino(D, +b.dataset.tesf));
   view.querySelectorAll('[data-serie]').forEach(b => b.onclick = () => {
