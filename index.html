@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VINEK</title>
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VINEK">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --brand:#0f766e; --brand-soft:#ccfbf1; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+  --bar:#e2e8f0;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0b1220; --card:#131c2e; --ink:#e5e7eb; --muted:#94a3b8; --line:#1f2a40;
+    --brand:#2dd4bf; --brand-soft:#123b3a; --bar:#1f2a40; }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit}
+.hidden{display:none!important}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.arrow{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:20px}
+.datebox{flex:1;text-align:center;position:relative}
+.datebox .d{font-weight:700;font-size:18px}
+.datebox .s{font-size:12px;color:var(--muted)}
+.datebox input{position:absolute;inset:0;opacity:0;width:100%}
+#hoje{position:absolute;right:16px;top:calc(env(safe-area-inset-top) + 60px);font-size:12px;padding:4px 10px;border-radius:99px;
+  border:1px solid var(--brand);background:var(--brand-soft);color:var(--brand)}
+main{padding:12px 16px calc(90px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.card h2 small{font-weight:500;color:var(--muted);font-size:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}
+.row+.row{border-top:1px solid var(--line)}
+.muted{color:var(--muted);font-size:13px}
+.bar{height:10px;background:var(--bar);border-radius:99px;overflow:hidden;margin:4px 0 2px}
+.bar>i{display:block;height:100%;background:var(--brand);border-radius:99px}
+.bar.over>i{background:var(--bad)}
+.macro{margin-bottom:8px}
+.macro .top{display:flex;justify-content:space-between;font-size:14px}
+.big{font-size:32px;font-weight:800}
+.pill{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--bar);color:var(--muted);white-space:nowrap}
+.pill.ok{background:#dcfce7;color:#166534}
+.pill.warn{background:#fef3c7;color:#92400e}
+@media (prefers-color-scheme: dark){ .pill.ok{background:#14532d;color:#bbf7d0} .pill.warn{background:#78350f;color:#fde68a} }
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qb{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px 6px;text-align:center;min-height:76px}
+.qb b{display:block;font-size:22px}
+.qb span{font-size:12px;display:block;margin-top:2px}
+.qb:active{transform:scale(.96);background:var(--brand-soft)}
+.btn{border:0;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+.btn.small{padding:6px 10px;font-size:13px}
+.x{border:0;background:transparent;color:var(--muted);font-size:18px;padding:4px 8px}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:5;background:var(--card);border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:transparent;padding:10px 0 12px;font-size:12px;color:var(--muted)}
+nav button b{display:block;font-size:20px}
+nav button.on{color:var(--brand);font-weight:700}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:9;background:#0f172a;color:#fff;
+  border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;max-width:608px;margin:0 auto}
+#toast button{background:transparent;border:0;color:#5eead4;font-weight:700}
+form label{display:block;font-size:13px;color:var(--muted);margin:8px 0 2px}
+input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.four{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#login{max-width:420px;margin:15vh auto 0;padding:0 16px}
+#login h1{font-size:34px;margin:0 0 4px;color:var(--brand)}
+.check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;background:transparent;padding:0}
+.check.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.spec{border-left:4px solid var(--brand);background:var(--brand-soft)}
+</style>
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <h1>VINEK</h1>
+  <p class="muted">Entre com seu email e senha.</p>
+  <form id="loginForm">
+    <label>Email</label>
+    <input id="lEmail" type="email" value="cbkevin19@gmail.com" autocomplete="username" required>
+    <label>Senha</label>
+    <input id="lPass" type="password" autocomplete="current-password" minlength="8" required>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" type="submit" style="flex:1">Entrar</button>
+      <button class="btn ghost" type="button" id="btnSignup">Primeiro acesso</button>
+    </div>
+    <p id="lMsg" class="muted"></p>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <button class="arrow" id="prev" aria-label="Dia anterior">◀</button>
+    <div class="datebox">
+      <div class="d" id="dLabel">—</div>
+      <div class="s" id="dSub"></div>
+      <input type="date" id="dPick" aria-label="Escolher data">
+    </div>
+    <button class="arrow" id="next" aria-label="Próximo dia">▶</button>
+  </header>
+  <button id="hoje" class="hidden">Hoje</button>
+  <main id="view"></main>
+  <nav>
+    <button data-tab="inicio" class="on"><b>🏠</b>Início</button>
+    <button data-tab="nutricao"><b>🍽️</b>Nutrição</button>
+    <button data-tab="remedios"><b>💊</b>Remédios</button>
+  </nav>
+</div>
+
+<div id="toast" class="hidden"><span id="tMsg"></span><button id="tUndo">Desfazer</button></div>
+
+<script src="/supabase.js"></script>
+<script>
+const SB_URL = 'https://gaispiegmuhbgjxuudtw.supabase.co';
+const SB_KEY = 'sb_publishable_j9u9DZhYC4m8Bvtkh9JpIw_ucaJbArJ';
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+// ---------- datas (Brasil, UTC-3 fixo, sem horário de verão) ----------
+const TZ = '-03:00';
+const pad = n => String(n).padStart(2, '0');
+function hojeISO() {
+  const d = new Date(Date.now() - 3 * 3600e3);
+  return d.toISOString().slice(0, 10);
+}
+function addDias(iso, n) {
+  const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+const inicioDia = iso => iso + 'T00:00:00' + TZ;
+const fimDia = iso => addDias(iso, 1) + 'T00:00:00' + TZ;
+function horaLocal(ts) { const d = new Date(new Date(ts).getTime() - 3 * 3600e3); return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()); }
+function agoraNoDia(iso) {
+  // horário atual, mas no dia selecionado (para registrar dias passados)
+  const d = new Date(Date.now() - 3 * 3600e3);
+  return iso + 'T' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':00' + TZ;
+}
+function horaAgora() { const d = new Date(Date.now() - 3 * 3600e3); return d.getUTCHours() + d.getUTCMinutes() / 60; }
+const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+function rotuloData(iso) {
+  const d = new Date(iso + 'T12:00:00Z');
+  const h = hojeISO();
+  const rel = iso === h ? 'Hoje' : iso === addDias(h, -1) ? 'Ontem' : iso === addDias(h, 1) ? 'Amanhã' : null;
+  const curto = pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth() + 1);
+  return { d: (rel ? rel + ', ' : '') + curto, s: DIAS[d.getUTCDay()] };
+}
+const fmt = (n, c = 0) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('pt-BR', { maximumFractionDigits: c, minimumFractionDigits: 0 });
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- estado ----------
+const S = { dia: hojeISO(), tab: 'inicio', metas: {}, fav: [], rec: [], rem: [] };
+const $ = id => document.getElementById(id);
+const view = $('view');
+
+function metaNum(chave, padrao) {
+  const v = S.metas[chave]; const n = v ? parseFloat(String(v).replace(',', '.')) : NaN;
+  return isNaN(n) ? padrao : n;
+}
+function metaAgua(iso) {
+  // começou 1.500 ml em 13/10/2026, +250 ml por semana até 3.000
+  const semanas = Math.floor((new Date(iso) - new Date('2026-10-13')) / (7 * 864e5));
+  return Math.min(3000, 1500 + 250 * Math.max(0, semanas));
+}
+
+// ---------- toast com desfazer ----------
+let toastTimer, undoFn;
+function toast(msg, undo) {
+  $('tMsg').textContent = msg; undoFn = undo;
+  $('tUndo').classList.toggle('hidden', !undo);
+  $('toast').classList.remove('hidden');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.add('hidden'), 6000);
+}
+$('tUndo').onclick = async () => { $('toast').classList.add('hidden'); if (undoFn) { await undoFn(); undoFn = null; render(); } };
+function erro(e) { console.error(e); toast('Erro: ' + (e.message || e)); }
+
+// ---------- login ----------
+$('loginForm').onsubmit = async e => {
+  e.preventDefault(); $('lMsg').textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lPass').value });
+  $('lMsg').textContent = error ? (error.message.includes('confirm') ? 'Email ainda não confirmado. Avise o VINEK.' : 'Email ou senha errados.') : '';
+};
+$('btnSignup').onclick = async () => {
+  const email = $('lEmail').value.trim(), password = $('lPass').value;
+  if (password.length < 8) { $('lMsg').textContent = 'Crie uma senha com pelo menos 8 caracteres no campo Senha.'; return; }
+  $('lMsg').textContent = 'Criando acesso...';
+  const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin } });
+  if (error) { $('lMsg').textContent = 'Erro: ' + error.message; return; }
+  $('lMsg').textContent = data.session ? '' : 'Acesso criado. Avise o VINEK no chat para liberar, depois toque em Entrar.';
+};
+sb.auth.onAuthStateChange((_ev, session) => { session ? iniciar() : mostrarLogin(); });
+
+function mostrarLogin() { $('app').classList.add('hidden'); $('login').classList.remove('hidden'); }
+let iniciado = false;
+async function iniciar() {
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  if (iniciado) return; iniciado = true;
+  const [m, f, r, rm] = await Promise.all([
+    sb.from('metas').select('chave,valor'),
+    sb.from('refeicoes_favoritas').select('*').order('id'),
+    sb.from('recipientes').select('*').order('id'),
+    sb.from('remedios').select('*').eq('ativo', true).order('id'),
+  ]);
+  if (m.error) { erro(m.error); return; }
+  (m.data || []).forEach(x => S.metas[x.chave] = x.valor);
+  S.fav = f.data || []; S.rec = r.data || []; S.rem = rm.data || [];
+  render();
+}
+
+// ---------- navegação ----------
+function setDia(iso) { S.dia = iso; render(); }
+$('prev').onclick = () => setDia(addDias(S.dia, -1));
+$('next').onclick = () => setDia(addDias(S.dia, 1));
+$('hoje').onclick = () => setDia(hojeISO());
+$('dPick').onchange = e => e.target.value && setDia(e.target.value);
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab;
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  window.scrollTo(0, 0); render();
+});
+// arrastar para os lados também troca o dia
+let tx = null;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (tx == null || $('app').classList.contains('hidden')) return;
+  const dx = e.changedTouches[0].clientX - tx; tx = null;
+  if (Math.abs(dx) > 90) setDia(addDias(S.dia, dx > 0 ? -1 : 1));
+}, { passive: true });
+
+// ---------- dados do dia ----------
+async function carregarDia(iso) {
+  const ini = inicioDia(iso), fim = fimDia(iso);
+  const q = await Promise.all([
+    sb.from('refeicoes').select('*').gte('data_hora', ini).lt('data_hora', fim).order('data_hora'),
+    sb.from('agua_log').select('*').gte('data_hora', ini).lt('data_hora', fim).order('data_hora'),
+    sb.from('remedios_log').select('*').or(`and(horario_previsto.gte.${ini},horario_previsto.lt.${fim}),and(horario_previsto.is.null,tomado_em.gte.${ini},tomado_em.lt.${fim})`),
+    sb.from('plano_treinos').select('*').eq('data', iso).maybeSingle(),
+    sb.from('cardio').select('*').eq('data', iso),
+    sb.from('treinos').select('*').eq('data', iso),
+    sb.from('sono').select('*').eq('data', iso).maybeSingle(),
+    sb.from('diario').select('nota_final,data').eq('data', iso).maybeSingle(),
+    sb.from('notas').select('*').eq('concluido', false).in('tipo', ['tarefa', 'lembrete', 'ajuste_casa']).order('prazo', { nullsFirst: false }),
+    sb.from('casa_tarefas').select('*').eq('ativo', true).lte('proxima', iso).order('proxima'),
+    sb.from('plano_refeicoes').select('*').eq('data', iso).order('id'),
+  ]);
+  const bad = q.find(x => x.error); if (bad) throw bad.error;
+  const [ref, agua, remlog, plano, cardio, treinos, sono, diario, notas, casa, planoRef] = q.map(x => x.data);
+  return { ref, agua, remlog, plano, cardio, treinos, sono, diario, notas, casa, planoRef };
+}
+function somaMacros(ref) {
+  const t = { kcal: 0, p: 0, c: 0, g: 0 };
+  ref.forEach(r => { t.kcal += +r.kcal || 0; t.p += +r.proteina_g || 0; t.c += +r.carbo_g || 0; t.g += +r.gordura_g || 0; });
+  return t;
+}
+
+// ---------- render ----------
+let renderId = 0;
+async function render() {
+  const r = rotuloData(S.dia);
+  $('dLabel').textContent = r.d; $('dSub').textContent = r.s; $('dPick').value = S.dia;
+  $('hoje').classList.toggle('hidden', S.dia === hojeISO());
+  const id = ++renderId;
+  if (!view.innerHTML) view.innerHTML = '<p class="muted">Carregando...</p>';
+  try {
+    const D = await carregarDia(S.dia);
+    if (id !== renderId) return;
+    view.innerHTML = ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios })[S.tab](D);
+    ligarEventos(D);
+  } catch (e) { erro(e); }
+}
+
+function barra(label, val, meta, un) {
+  const pct = meta ? Math.min(100, val / meta * 100) : 0;
+  const over = meta && val > meta;
+  const falta = meta ? meta - val : null;
+  return `<div class="macro"><div class="top"><span>${label}</span><span><b>${fmt(val)}</b> / ${fmt(meta)} ${un}</span></div>
+    <div class="bar ${over ? 'over' : ''}"><i style="width:${pct}%"></i></div>
+    <div class="muted">${falta == null ? '' : falta >= 0 ? 'faltam ' + fmt(falta) + ' ' + un : 'passou ' + fmt(-falta) + ' ' + un}</div></div>`;
+}
+function blocoMacros(D) {
+  const t = somaMacros(D.ref);
+  return barra('Calorias', t.kcal, metaNum('kcal_meta_dia', 2070), 'kcal') +
+    barra('Proteína', t.p, metaNum('proteina_g_dia', 120), 'g') +
+    barra('Carboidrato', t.c, metaNum('carbo_g_dia', 251), 'g') +
+    barra('Gordura', t.g, metaNum('gordura_g_dia', 65), 'g');
+}
+function totalAgua(D) { return D.agua.reduce((s, a) => s + (+a.ml || 0), 0); }
+
+function statusRemedios(D) {
+  // uma linha por horário previsto de cada remédio
+  const linhas = [];
+  S.rem.forEach(rm => {
+    const hs = (rm.horarios && rm.horarios.length) ? rm.horarios : [null];
+    const logs = D.remlog.filter(l => l.remedio_id === rm.id).sort((a, b) => (a.horario_previsto || a.tomado_em).localeCompare(b.horario_previsto || b.tomado_em));
+    hs.forEach((h, i) => linhas.push({ rm, h: h ? h.slice(0, 5) : null, log: logs[i] || null }));
+  });
+  return linhas;
+}
+
+function treinoInfo(D) {
+  const bikeFeita = D.cardio.find(c => c.modalidade === 'bike');
+  const cali = D.treinos.length > 0;
+  const plano = D.plano;
+  return { bikeFeita, cali, plano };
+}
+
+function telaInicio(D) {
+  const nota = D.diario && D.diario.nota_final;
+  const agua = totalAgua(D), mAgua = metaAgua(S.dia);
+  const T = treinoInfo(D);
+  const rem = statusRemedios(D);
+  const pend = D.notas.filter(n => !n.prazo || n.prazo.slice(0, 10) <= S.dia);
+  const futuro = S.dia > hojeISO();
+  let html = '';
+  if (nota != null) html += `<div class="card"><h2>Nota do dia <small>parcial</small></h2><div class="big">${fmt(nota, 1)}</div></div>`;
+
+  html += `<div class="card" data-go="nutricao"><h2>Macros <small>${D.ref.length} registros ›</small></h2>${blocoMacros(D)}
+    ${futuro && D.planoRef.length ? `<div class="muted">Planejado: ${D.planoRef.map(p => esc(p.refeicao) + ' ' + fmt(p.kcal) + ' kcal').join(' · ')}</div>` : ''}</div>`;
+
+  html += `<div class="card" data-go="nutricao"><h2>Água <small>meta da semana ›</small></h2>${barra('Bebido', agua, mAgua, 'ml')}</div>`;
+
+  let tr = '';
+  if (T.plano && T.plano.bike) tr += `<div class="row"><span>🚴 Bike ${fmt(T.plano.bike.minutos)} min${T.plano.bike.km_alvo ? ' · alvo ' + fmt(T.plano.bike.km_alvo, 1) + ' km' : ''}</span>
+      ${T.bikeFeita ? `<span class="pill ok">feita ${fmt(T.bikeFeita.km, 2)} km</span>` : '<span class="pill">a fazer</span>'}</div>`;
+  else if (T.bikeFeita) tr += `<div class="row"><span>🚴 Bike</span><span class="pill ok">feita ${fmt(T.bikeFeita.minutos)} min</span></div>`;
+  if (T.plano && Array.isArray(T.plano.calistenia) && T.plano.calistenia.length) {
+    tr += `<div class="row"><span>💪 Calistenia (${T.plano.calistenia.length} exercícios)</span>${T.cali ? '<span class="pill ok">feita</span>' : '<span class="pill">a fazer</span>'}</div>`;
+    tr += `<div class="muted">${T.plano.calistenia.map(e => esc(e.exercicio) + ' ' + e.series + 'x' + e.reps).join(' · ')}</div>`;
+  } else if (T.cali) tr += `<div class="row"><span>💪 Calistenia</span><span class="pill ok">feita</span></div>`;
+  if (!tr) tr = '<p class="muted">Sem treino planejado nem registrado.</p>';
+  html += `<div class="card"><h2>Treino</h2>${tr}</div>`;
+
+  html += `<div class="card" data-go="remedios"><h2>Remédios <small>›</small></h2>${rem.map(l => `<div class="row"><span>${esc(l.rm.nome)}${l.h ? ' <span class="muted">' + l.h + '</span>' : ''}</span>
+    ${l.log ? `<span class="pill ${l.log.status === 'tomado' ? 'ok' : 'warn'}">${l.log.status}</span>` : '<span class="pill">pendente</span>'}</div>`).join('')}</div>`;
+
+  html += `<div class="card"><h2>Tarefas pendentes <small>${pend.length + D.casa.length}</small></h2>
+    ${pend.map(n => `<div class="row"><span>${esc(n.texto.length > 90 ? n.texto.slice(0, 90) + '…' : n.texto)}${n.prazo ? `<div class="muted">até ${n.prazo.slice(8, 10)}/${n.prazo.slice(5, 7)}</div>` : ''}</span>
+      <button class="check" data-done="${n.id}" aria-label="Concluir">✓</button></div>`).join('')}
+    ${D.casa.map(c => `<div class="row"><span>🏡 ${esc(c.nome)}<div class="muted">casa · ${esc(c.quando || c.frequencia || '')}</div></span></div>`).join('')}
+    ${pend.length + D.casa.length ? '' : '<p class="muted">Nada pendente.</p>'}</div>`;
+
+  const s = D.sono;
+  html += `<div class="card"><h2>Sono</h2>${s ? `<div class="row"><span>${fmt(s.horas, 1)} h dormidas</span><span class="pill">qualidade ${s.qualidade ?? '—'}/5</span></div>` : '<p class="muted">Sem registro desta noite.</p>'}</div>`;
+  return html;
+}
+
+// ---------- Nutrição ----------
+function tipoPorHora(h) { return h < 10.5 ? 'lanche_manha' : h < 14.5 ? 'almoco' : h < 17 ? 'lanche' : h < 20.5 ? 'jantar' : 'ceia'; }
+const TIPOS = { cafe: 'Café da manhã', lanche_manha: 'Lanche da manhã', almoco: 'Almoço', lanche: 'Lanche', jantar: 'Janta', ceia: 'Ceia', bebida: 'Bebida', alcool: 'Álcool', outro: 'Outro' };
+const QUICK_FAV = ['sanduba', 'caneca de café', 'rosquinha', 'iogurte', 'bala'];
+const ICON = { 'sanduba': '🥪', 'caneca de café': '☕', 'rosquinha': '🍩', 'iogurte': '🥛', 'bala': '🍬', 'carne com cebola': '🥩', 'maionese': '🥄' };
+const por100 = f => /por 100 ?g/i.test(f.descricao || '');
+
+function telaNutricao(D) {
+  const t = somaMacros(D.ref);
+  const agua = totalAgua(D), mAgua = metaAgua(S.dia);
+  const favQuick = QUICK_FAV.map(a => S.fav.find(f => f.apelido === a)).filter(Boolean);
+  const favOutras = S.fav.filter(f => !QUICK_FAV.includes(f.apelido));
+  const recs = S.rec.filter(r => r.apelido !== 'caneca do serviço');
+  let html = `<div class="card spec"><h2>NUTRI</h2><div class="muted">${resumoNutri(t)}</div></div>`;
+  html += `<div class="card"><h2>Macros do dia</h2>${blocoMacros(D)}</div>`;
+  html += `<div class="card"><h2>Registro rápido <small>1 toque</small></h2><div class="grid">
+    ${favQuick.map(f => `<button class="qb" data-fav="${f.id}"><b>${ICON[f.apelido] || '⭐'}</b><span>${esc(f.apelido)}</span><span class="muted">${fmt(f.kcal)} kcal</span></button>`).join('')}
+  </div>
+  ${favOutras.length ? `<div class="muted" style="margin:10px 0 6px">Outras favoritas (pede a quantidade)</div><div class="grid">
+    ${favOutras.map(f => `<button class="qb" data-fav="${f.id}"><b>${ICON[f.apelido] || '⭐'}</b><span>${esc(f.apelido)}</span><span class="muted">${fmt(f.kcal)} kcal${por100(f) ? '/100 g' : ''}</span></button>`).join('')}</div>` : ''}
+  </div>`;
+  html += `<div class="card"><h2>Água <small>${fmt(agua)} / ${fmt(mAgua)} ml</small></h2>
+    <div class="bar"><i style="width:${Math.min(100, agua / mAgua * 100)}%"></i></div>
+    <div class="grid" style="margin-top:10px">${recs.map(r => `<button class="qb" data-rec="${r.id}"><b>💧</b><span>${esc(r.apelido)}</span><span class="muted">${r.ml} ml</span></button>`).join('')}</div>
+    ${D.agua.length ? `<div style="margin-top:8px">${D.agua.map(a => `<div class="row"><span class="muted">${horaLocal(a.data_hora)} · ${esc(nomeRec(a.recipiente_id) || a.observacoes || 'água')}</span><span>${a.ml} ml <button class="x" data-delagua="${a.id}">×</button></span></div>`).join('')}</div>` : ''}
+  </div>`;
+  html += `<div class="card"><h2>Refeições <small>${fmt(t.kcal)} kcal</small></h2>
+    ${D.ref.length ? D.ref.map(r => `<div class="row"><span><b>${TIPOS[r.tipo] || r.tipo}</b> <span class="muted">${horaLocal(r.data_hora)}</span><div class="muted">${esc(r.descricao)}</div></span>
+      <span style="text-align:right;white-space:nowrap">${fmt(r.kcal)} kcal<div class="muted">P ${fmt(r.proteina_g)} g</div><button class="x" data-delref="${r.id}">×</button></span></div>`).join('') : '<p class="muted">Nada registrado.</p>'}
+  </div>`;
+  html += `<div class="card"><h2>Registro manual</h2>
+    <form id="fManual">
+      <div class="two"><div><label>Refeição</label><select id="mTipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === tipoPorHora(horaAgora()) ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div><label>Hora</label><input id="mHora" type="time" value="${horaLocal(new Date())}"></div></div>
+      <label>O que comeu (com gramas, cru ou pronto)</label><input id="mDesc" required placeholder="ex.: 150 g arroz pronto + 120 g frango pronto">
+      <div class="four"><div><label>kcal</label><input id="mK" inputmode="decimal"></div><div><label>Prot g</label><input id="mP" inputmode="decimal"></div>
+      <div><label>Carb g</label><input id="mC" inputmode="decimal"></div><div><label>Gord g</label><input id="mG" inputmode="decimal"></div></div>
+      <p class="muted">Não sabe os números? Deixe em branco: fica marcado para o VINEK calcular no check-in.</p>
+      <button class="btn" type="submit" style="width:100%">Salvar refeição</button>
+    </form></div>`;
+  return html;
+}
+function resumoNutri(t) {
+  const mk = metaNum('kcal_meta_dia', 2070), mp = metaNum('proteina_g_dia', 120);
+  const fk = mk - t.kcal, fp = mp - t.p;
+  if (!t.kcal) return 'Nada registrado ainda neste dia.';
+  if (fk < 0) return `Passou ${fmt(-fk)} kcal da meta. Próximas refeições: só proteína magra e salada, nada gorduroso à noite (refluxo).`;
+  if (fp > 0) return `Faltam ${fmt(fp)} g de proteína em ${fmt(fk)} kcal. Priorize frango, atum, ovo ou iogurte na próxima refeição.`;
+  return `Proteína batida. Restam ${fmt(fk)} kcal; se comer de novo, algo leve.`;
+}
+const nomeRec = id => (S.rec.find(r => r.id === id) || {}).apelido;
+
+async function registrarFav(f) {
+  let qtd = 1, gramas = null;
+  if (!QUICK_FAV.includes(f.apelido)) {
+    const resp = prompt(por100(f) ? `Quantos gramas de ${f.apelido} (pronto)?` : `Quantas unidades de ${f.apelido}?`, por100(f) ? '150' : '1');
+    if (!resp) return;
+    const n = parseFloat(resp.replace(',', '.')); if (!(n > 0)) return;
+    if (por100(f)) { gramas = n; qtd = n / 100; } else qtd = n;
+  }
+  const h = horaAgora();
+  let tipo = tipoPorHora(h), desc;
+  if (f.apelido === 'caneca de café') { tipo = 'bebida'; desc = '1 caneca de café preto com adoçante'; }
+  else if (['rosquinha', 'bala'].includes(f.apelido)) { tipo = 'lanche'; desc = `Beliscar: ${qtd} ${f.apelido}${qtd > 1 ? 's' : ''}`; }
+  else if (f.apelido === 'sanduba') { tipo = h < 11 ? 'lanche_manha' : tipo; desc = 'Sanduba (favorita)'; }
+  else desc = gramas ? `${gramas} g de ${f.apelido} (favorita)` : `${qtd} ${f.apelido} (favorita)`;
+  const k = v => v == null ? null : Math.round(v * qtd * 10) / 10;
+  const row = {
+    data_hora: agoraNoDia(S.dia), tipo, descricao: desc, favorita_id: f.id,
+    kcal: k(f.kcal), proteina_g: k(f.proteina_g), carbo_g: k(f.carbo_g), gordura_g: k(f.gordura_g),
+    itens: (f.itens || []).map(i => ({ ...i, qtd_favorita: qtd })), observacoes: 'registrado pelo app'
+  };
+  const { data, error } = await sb.from('refeicoes').insert(row).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ ${f.apelido}: ${fmt(row.kcal)} kcal`, () => sb.from('refeicoes').delete().eq('id', data.id));
+  render();
+}
+async function registrarAgua(r) {
+  const row = { data_hora: agoraNoDia(S.dia), recipiente_id: r.id, quantidade: 1, ml: r.ml, observacoes: r.apelido + ' (app)' };
+  const { data, error } = await sb.from('agua_log').insert(row).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ ${r.ml} ml (${r.apelido})`, () => sb.from('agua_log').delete().eq('id', data.id));
+  render();
+}
+
+// ---------- Remédios ----------
+function telaRemedios(D) {
+  const linhas = statusRemedios(D);
+  let html = `<div class="card spec"><h2>DOUTOR</h2><div class="muted">${resumoDoutor()}</div></div>`;
+  html += `<div class="card"><h2>Doses do dia</h2>${linhas.map((l, i) => `<div class="row">
+    <span><b>${esc(l.rm.nome)}</b> ${l.h ? '<span class="muted">' + l.h + '</span>' : ''}<div class="muted">${esc(l.rm.dose || '')}</div></span>
+    ${l.log ? `<span><span class="pill ${l.log.status === 'tomado' ? 'ok' : 'warn'}">${l.log.status} ${horaLocal(l.log.tomado_em)}</span> <button class="x" data-dellog="${l.log.id}" data-rem="${l.rm.id}" data-st="${l.log.status}">×</button></span>`
+      : `<span style="display:flex;gap:6px"><button class="btn small" data-tomar="${i}">Tomei</button><button class="btn small ghost" data-pular="${i}">Pulei</button></span>`}
+  </div>`).join('')}</div>`;
+  html += `<div class="card"><h2>Estoque</h2>${S.rem.map(r => `<div class="row"><span>${esc(r.nome)}</span>
+    <span class="pill ${r.estoque <= 7 ? 'warn' : ''}">${r.estoque ?? '—'} ${esc(r.unidade || '')}${r.estoque <= 7 ? ' · comprar' : ''}</span></div>`).join('')}</div>`;
+  return html;
+}
+function resumoDoutor() {
+  const baixos = S.rem.filter(r => r.estoque != null && r.estoque <= 7);
+  return baixos.length ? 'Estoque baixo: ' + baixos.map(r => `${r.nome} (${r.estoque})`).join(', ') + '. Compre antes de acabar.'
+    : 'Estoques ok. ' + S.rem.map(r => `${r.nome}: ${r.estoque}`).join(' · ');
+}
+async function registrarDose(l, status) {
+  const prev = l.h ? `${S.dia}T${l.h}:00${TZ}` : agoraNoDia(S.dia);
+  const row = { remedio_id: l.rm.id, horario_previsto: prev, tomado_em: agoraNoDia(S.dia), status, observacoes: 'registrado pelo app' };
+  const { data, error } = await sb.from('remedios_log').insert(row).select('id').single();
+  if (error) return erro(error);
+  if (status === 'tomado' && l.rm.estoque != null) {
+    const novo = l.rm.estoque - 1;
+    const u = await sb.from('remedios').update({ estoque: novo }).eq('id', l.rm.id);
+    if (u.error) return erro(u.error);
+    l.rm.estoque = novo;
+  }
+  toast(`✓ ${l.rm.nome}: ${status}`, () => desfazerDose(data.id, l.rm.id, status));
+  render();
+}
+async function desfazerDose(logId, remId, status) {
+  await sb.from('remedios_log').delete().eq('id', logId);
+  if (status === 'tomado') {
+    const r = S.rem.find(x => x.id === remId);
+    if (r && r.estoque != null) { r.estoque += 1; await sb.from('remedios').update({ estoque: r.estoque }).eq('id', remId); }
+  }
+}
+
+// ---------- eventos ----------
+function ligarEventos(D) {
+  view.querySelectorAll('[data-go]').forEach(el => el.onclick = e => {
+    if (e.target.closest('button')) return;
+    document.querySelector(`nav button[data-tab="${el.dataset.go}"]`).click();
+  });
+  view.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => registrarFav(S.fav.find(f => f.id == b.dataset.fav)));
+  view.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => registrarAgua(S.rec.find(r => r.id == b.dataset.rec)));
+  view.querySelectorAll('[data-delref]').forEach(b => b.onclick = async () => {
+    if (!confirm('Apagar esta refeição?')) return;
+    const { error } = await sb.from('refeicoes').delete().eq('id', b.dataset.delref); error ? erro(error) : render();
+  });
+  view.querySelectorAll('[data-delagua]').forEach(b => b.onclick = async () => {
+    const { error } = await sb.from('agua_log').delete().eq('id', b.dataset.delagua); error ? erro(error) : render();
+  });
+  view.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.done;
+    const { error } = await sb.from('notas').update({ concluido: true }).eq('id', id);
+    if (error) return erro(error);
+    toast('✓ Tarefa concluída', () => sb.from('notas').update({ concluido: false }).eq('id', id));
+    render();
+  });
+  const linhas = S.tab === 'remedios' ? statusRemedios(D) : [];
+  view.querySelectorAll('[data-tomar]').forEach(b => b.onclick = () => registrarDose(linhas[b.dataset.tomar], 'tomado'));
+  view.querySelectorAll('[data-pular]').forEach(b => b.onclick = () => registrarDose(linhas[b.dataset.pular], 'pulado'));
+  view.querySelectorAll('[data-dellog]').forEach(b => b.onclick = async () => {
+    if (!confirm('Desfazer este registro?')) return;
+    await desfazerDose(+b.dataset.dellog, +b.dataset.rem, b.dataset.st); render();
+  });
+  const fm = $('fManual');
+  if (fm) fm.onsubmit = async e => {
+    e.preventDefault();
+    const num = id => { const v = $(id).value.trim().replace(',', '.'); return v === '' ? null : parseFloat(v); };
+    const k = num('mK');
+    const row = {
+      data_hora: `${S.dia}T${$('mHora').value || '12:00'}:00${TZ}`, tipo: $('mTipo').value, descricao: $('mDesc').value.trim(),
+      kcal: k, proteina_g: num('mP'), carbo_g: num('mC'), gordura_g: num('mG'),
+      observacoes: k == null ? 'APP: calcular kcal e macros (registrado sem números)' : 'registrado pelo app'
+    };
+    const { data, error } = await sb.from('refeicoes').insert(row).select('id').single();
+    if (error) return erro(error);
+    toast(k == null ? '✓ Salvo. O VINEK calcula os números.' : `✓ Refeição salva: ${fmt(k)} kcal`, () => sb.from('refeicoes').delete().eq('id', data.id));
+    render();
+  };
+}
+
+// recarrega quando o app volta para a tela (ex.: depois de registrar pelo chat)
+document.addEventListener('visibilitychange', () => { if (!document.hidden && iniciado) render(); });
+
+(async () => {
+  const { data } = await sb.auth.getSession();
+  data.session ? iniciar() : mostrarLogin();
+})();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+</body>
+</html>
