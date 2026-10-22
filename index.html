@@ -274,7 +274,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const vibrar = () => { try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} };
 
 // ---------- estado ----------
-const S = { dia: hojeISO(), tab: 'inicio', metas: {}, fav: [], rec: [], rem: [] };
+const S = { dia: hojeISO(), tab: ['inicio', 'nutricao', 'remedios', 'check'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', metas: {}, fav: [], rec: [], rem: [] };
 const $ = id => document.getElementById(id);
 const view = $('view');
 
@@ -329,13 +329,14 @@ async function iniciar() {
   if (m.error) { erro(m.error); return; }
   (m.data || []).forEach(x => S.metas[x.chave] = x.valor);
   S.fav = f.data || []; S.rec = r.data || []; S.rem = rm.data || [];
+  if ('serviceWorker' in navigator && 'PushManager' in window) await checarPush();
   render();
 }
 
 // ---------- navegação ----------
 $('prev').innerHTML = ic('chevron-left'); $('next').innerHTML = ic('chevron-right');
 const NAV = { inicio: ['house', 'Início'], nutricao: ['utensils', 'Nutrição'], remedios: ['pill', 'Remédios'], check: ['list-checks', 'Check'] };
-document.querySelectorAll('nav button').forEach(b => b.innerHTML = ic(NAV[b.dataset.tab][0]) + NAV[b.dataset.tab][1]);
+document.querySelectorAll('nav button').forEach(b => { b.innerHTML = ic(NAV[b.dataset.tab][0]) + NAV[b.dataset.tab][1]; b.classList.toggle('on', b.dataset.tab === S.tab); });
 function setDia(iso) { S.dia = iso; vibrar(); render(); }
 $('prev').onclick = () => setDia(addDias(S.dia, -1));
 $('next').onclick = () => setDia(addDias(S.dia, 1));
@@ -644,8 +645,46 @@ function telaCheck(D) {
   const feitos = (D.sono && !S.edit.has('_sono') ? [`<div class="done" data-edit="_sono"><span>Sono</span><span class="v">${fmt(D.sono.horas, 1)} h · ${D.sono.qualidade ?? '—'}/5</span></div>`] : [])
     .concat(C.feito.map(c => `<div class="done" data-edit="${c.k}"><span>${c.t}</span><span class="v">${valorTxt(c, C.di[c.k])}</span></div>`));
   if (feitos.length) html += `<div class="card"><h2><span class="t">${ic('circle-check')} Respondido</span><small>toque pra mudar</small></h2>${feitos.join('')}</div>`;
+  html += cardLembretes();
   return html;
 }
+// ---------- lembretes (web push) ----------
+const VAPID = 'BL2lAXCs8bRBxUZ5Jp8VrtVfrEdePcBMrL58cHrNhzR-cGlhdLN5tfnF_gKtF0FzMJk9SkthQCiTqswGk9JPDD0';
+function cardLembretes() {
+  const sup = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const st = !sup ? 'indisponivel' : Notification.permission === 'denied' ? 'bloqueado' : (S.pushOn ? 'on' : 'off');
+  return `<div class="card"><h2><span class="t">${ic('zap')} Lembretes no celular</span><small>${st === 'on' ? 'ligados' : ''}</small></h2>
+    <p class="muted" style="margin:0 0 12px">Só avisam quando falta algo: remédio não marcado (15 min depois do horário), água abaixo do ritmo (10h, 14h30, 16h30 e 19h30 nos dias úteis) e o check às 21h45.</p>
+    ${st === 'indisponivel' ? '<p class="muted">Este navegador não aceita notificações. Abra pelo ícone do app no Chrome.</p>'
+      : st === 'bloqueado' ? '<p class="muted">As notificações estão bloqueadas. Libere em Configurações do Android › Apps › Chrome › Notificações.</p>'
+      : st === 'on' ? '<div style="display:flex;gap:8px"><button class="btn small" id="pushTeste">Mandar um teste</button><button class="btn small ghost" id="pushOff">Desligar</button></div>'
+      : '<button class="btn" style="width:100%" id="pushOn">Ligar lembretes</button>'}</div>`;
+}
+const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function checarPush() {
+  try { const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, r) => setTimeout(() => r('t'), 2000))]); S.pushOn = !!(await reg.pushManager.getSubscription()); } catch (e) { S.pushOn = false; }
+}
+async function ligarPush() {
+  vibrar();
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { toast('Permissão negada'); return render(); }
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+  const j = sub.toJSON();
+  const { error } = await sb.from('push_subs').upsert({ endpoint: j.endpoint, sub: j, aparelho: navigator.userAgent.slice(0, 120) }, { onConflict: 'endpoint' });
+  if (error) return erro(error);
+  S.pushOn = true; await testarPush(); render();
+}
+async function desligarPush() {
+  const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
+  if (sub) { await sb.from('push_subs').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+  S.pushOn = false; toast('Lembretes desligados'); render();
+}
+async function testarPush() {
+  const { error } = await sb.functions.invoke('lembretes', { body: { teste: true } });
+  toast(error ? 'Erro no teste: ' + error.message : '✓ Teste enviado, deve chegar em segundos');
+}
+
 async function salvarCheck(campo, valor) {
   vibrar();
   const { error } = await sb.from('diario').upsert({ data: S.dia, [campo]: valor }, { onConflict: 'data' });
@@ -897,6 +936,9 @@ function ligarEventos(D) {
     await desfazerDose(+b.dataset.dellog, +b.dataset.rem, b.dataset.st); render();
   });
   const br = $('btnRepetir'); if (br) br.onclick = abrirRepetir;
+  if ($('pushOn')) $('pushOn').onclick = ligarPush;
+  if ($('pushOff')) $('pushOff').onclick = desligarPush;
+  if ($('pushTeste')) $('pushTeste').onclick = testarPush;
   const fm = $('fManual');
   if (fm) fm.onsubmit = async e => {
     e.preventDefault(); vibrar();
