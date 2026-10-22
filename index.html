@@ -160,6 +160,25 @@ nav button .dot{position:absolute;top:4px;right:calc(50% - 20px);min-width:16px;
 .prog{display:flex;align-items:center;gap:14px}
 .prog svg{width:64px;height:64px;flex:none}
 .prog .big{font-size:26px;font-weight:900}
+.ex{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.ex:first-of-type{border-top:0}
+.exb{flex:1;min-width:0}
+.anim{width:96px;height:96px;border-radius:14px;overflow:hidden;position:relative;flex:none;background:#fff}
+.anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.anim img+img{animation:flip 1.4s steps(1) infinite}
+@keyframes flip{0%{opacity:0}50%{opacity:1}}
+.series{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.sr{width:36px;height:36px;border-radius:50%;border:2px solid #2a323e;background:transparent;font-weight:800}
+.sr.on{background:var(--prot);border-color:var(--prot);color:#fff}
+.yt{margin-left:auto;color:var(--muted);font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:4px}
+.yt svg.i{width:16px;height:16px;color:#ff4d5e}
+#timer{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:8;max-width:560px;margin:0 auto;background:#1b1209;border:1px solid var(--prot);
+  border-radius:18px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 30px #ff7a2f33}
+#tmV{font-size:34px;font-weight:900;color:var(--prot);line-height:1}
+.tb{width:100%;border-collapse:collapse;font-size:14px}
+.tb th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;padding:4px}
+.tb td{padding:7px 4px;border-top:1px solid var(--line);text-align:right}
+.tb td:first-child,.tb th:first-child{text-align:left;color:var(--muted)}
 .link{display:block;margin:12px auto 0;border:0;background:transparent;color:var(--dim);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 #sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}
 #sheet .sh{background:var(--card);border-top:1px solid var(--line);border-radius:24px 24px 0 0;width:100%;max-width:640px;margin:0 auto;max-height:75vh;overflow:auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));animation:up .25s ease-out}
@@ -224,17 +243,19 @@ input:focus,select:focus{outline:2px solid #3cf28a66;border-color:transparent}
   <nav>
     <button data-tab="inicio" class="on"></button>
     <button data-tab="nutricao"></button>
-    <button data-tab="remedios"></button>
+    <button data-tab="treino"></button>
     <button data-tab="check"></button>
+    <button data-tab="mais"></button>
   </nav>
 </div>
 
-<div id="sheet" class="hidden"><div class="sh"><div class="shh"><b>Repetir refeição</b><button class="x" id="shClose">✕</button></div><div id="shBody"></div></div></div>
+<div id="sheet" class="hidden"><div class="sh"><div class="shh"><b id="shTitle">Repetir refeição</b><button class="x" id="shClose">✕</button></div><div id="shBody"></div></div></div>
+<div id="timer" class="hidden"><div><div id="tmL" class="muted">descanso</div><div id="tmV" class="num">0:00</div></div><div style="display:flex;gap:6px"><button class="btn small ghost" id="tmMais">+15s</button><button class="btn small" id="tmStop">Parar</button></div></div>
 <div id="toast" class="hidden"><span id="tMsg"></span><button id="tUndo">Desfazer</button></div>
 
 <script src="/supabase.js"></script>
 <script>
-const ICONS = {"house": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\" /> <path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\" /> <path d=\"M7 2v20\" /> <path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\" />", "pill": "<path d=\"m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z\" /> <path d=\"m8.5 8.5 7 7\" />", "droplet": "<path d=\"M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z\" />", "coffee": "<path d=\"M10 2v2\" /> <path d=\"M14 2v2\" /> <path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" /> <path d=\"M6 2v2\" />", "sandwich": "<path d=\"m2.37 11.223 8.372-6.777a2 2 0 0 1 2.516 0l8.371 6.777\" /> <path d=\"M21 15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-5.25\" /> <path d=\"M3 15a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h9\" /> <path d=\"m6.67 15 6.13 4.6a2 2 0 0 0 2.8-.4l3.15-4.2\" /> <rect width=\"20\" height=\"4\" x=\"2\" y=\"11\" rx=\"1\" />", "donut": "<path d=\"M20.5 10a2.5 2.5 0 0 1-2.4-3H18a2.95 2.95 0 0 1-2.6-4.4 10 10 0 1 0 6.3 7.1c-.3.2-.8.3-1.2.3\" /> <circle cx=\"12\" cy=\"12\" r=\"3\" />", "milk": "<path d=\"M8 2h8\" /> <path d=\"M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2\" /> <path d=\"M7 15a6.472 6.472 0 0 1 5 0 6.47 6.47 0 0 0 5 0\" />", "candy": "<path d=\"m9.5 7.5-2 2a4.95 4.95 0 1 0 7 7l2-2a4.95 4.95 0 1 0-7-7Z\" /> <path d=\"M14 6.5v10\" /> <path d=\"M10 7.5v10\" /> <path d=\"m16 7 1-5 1.37.68A3 3 0 0 0 19.7 3H21v1.3c0 .46.1.92.32 1.33L22 7l-5 1\" /> <path d=\"m8 17-1 5-1.37-.68A3 3 0 0 0 4.3 21H3v-1.3a3 3 0 0 0-.32-1.33L2 17l5-1\" />", "beef": "<circle cx=\"12.5\" cy=\"8.5\" r=\"2.5\" /> <path d=\"M12.5 2a6.5 6.5 0 0 0-6.22 4.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3A6.5 6.5 0 0 0 12.5 2Z\" /> <path d=\"m18.5 6 2.19 4.5a6.48 6.48 0 0 1 .31 2 6.49 6.49 0 0 1-2.6 5.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5\" />", "glass-water": "<path d=\"M5.116 4.104A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .994 1.105L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z\" /> <path d=\"M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0\" />", "chevron-left": "<path d=\"m15 18-6-6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "dumbbell": "<path d=\"M14.4 14.4 9.6 9.6\" /> <path d=\"M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z\" /> <path d=\"m21.5 21.5-1.4-1.4\" /> <path d=\"M3.9 3.9 2.5 2.5\" /> <path d=\"M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z\" />", "bike": "<circle cx=\"18.5\" cy=\"17.5\" r=\"3.5\" /> <circle cx=\"5.5\" cy=\"17.5\" r=\"3.5\" /> <circle cx=\"15\" cy=\"5\" r=\"1\" /> <path d=\"M12 17.5V14l-3-3 4-3 2 3h2\" />", "moon": "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\" />", "circle-check": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"m9 12 2 2 4-4\" />", "list-checks": "<path d=\"m3 17 2 2 4-4\" /> <path d=\"m3 7 2 2 4-4\" /> <path d=\"M13 6h8\" /> <path d=\"M13 12h8\" /> <path d=\"M13 18h8\" />", "flame": "<path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\" />", "zap": "<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />", "trophy": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\" /> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\" /> <path d=\"M4 22h16\" /> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\" /> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\" /> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "calendar": "<path d=\"M8 2v4\" /> <path d=\"M16 2v4\" /> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /> <path d=\"M3 10h18\" />", "sparkles": "<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /> <path d=\"M20 3v4\" /> <path d=\"M22 5h-4\" /> <path d=\"M4 17v2\" /> <path d=\"M5 18H3\" />", "log-out": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\" /> <polyline points=\"16 17 21 12 16 7\" /> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\" />"};
+const ICONS = {"timer": "<line x1=\"10\" x2=\"14\" y1=\"2\" y2=\"2\" /> <line x1=\"12\" x2=\"15\" y1=\"14\" y2=\"11\" /> <circle cx=\"12\" cy=\"14\" r=\"8\" />", "scale": "<path d=\"m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\" /> <path d=\"m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z\" /> <path d=\"M7 21h10\" /> <path d=\"M12 3v18\" /> <path d=\"M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2\" />", "ruler": "<path d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z\" /> <path d=\"m14.5 12.5 2-2\" /> <path d=\"m11.5 9.5 2-2\" /> <path d=\"m8.5 6.5 2-2\" /> <path d=\"m17.5 15.5 2-2\" />", "layout-grid": "<rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\" />", "play": "<polygon points=\"6 3 20 12 6 21 6 3\" />", "pause": "<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /> <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />", "rotate-ccw": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /> <path d=\"M3 3v5h5\" />", "youtube": "<path d=\"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17\" /> <path d=\"m10 15 5-3-5-3z\" />", "wallet": "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\" /> <path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\" />", "chart-line": "<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /> <path d=\"m19 9-5 5-4-4-3 3\" />", "target": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <circle cx=\"12\" cy=\"12\" r=\"6\" /> <circle cx=\"12\" cy=\"12\" r=\"2\" />", "trending-down": "<polyline points=\"22 17 13.5 8.5 8.5 13.5 2 7\" /> <polyline points=\"16 17 22 17 22 11\" />", "trending-up": "<polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\" /> <polyline points=\"16 7 22 7 22 13\" />", "bed": "<path d=\"M2 4v16\" /> <path d=\"M2 8h18a2 2 0 0 1 2 2v10\" /> <path d=\"M2 17h20\" /> <path d=\"M6 8v9\" />", "video": "<path d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" />", "house": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\" /> <path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\" /> <path d=\"M7 2v20\" /> <path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\" />", "pill": "<path d=\"m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z\" /> <path d=\"m8.5 8.5 7 7\" />", "droplet": "<path d=\"M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z\" />", "coffee": "<path d=\"M10 2v2\" /> <path d=\"M14 2v2\" /> <path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" /> <path d=\"M6 2v2\" />", "sandwich": "<path d=\"m2.37 11.223 8.372-6.777a2 2 0 0 1 2.516 0l8.371 6.777\" /> <path d=\"M21 15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-5.25\" /> <path d=\"M3 15a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h9\" /> <path d=\"m6.67 15 6.13 4.6a2 2 0 0 0 2.8-.4l3.15-4.2\" /> <rect width=\"20\" height=\"4\" x=\"2\" y=\"11\" rx=\"1\" />", "donut": "<path d=\"M20.5 10a2.5 2.5 0 0 1-2.4-3H18a2.95 2.95 0 0 1-2.6-4.4 10 10 0 1 0 6.3 7.1c-.3.2-.8.3-1.2.3\" /> <circle cx=\"12\" cy=\"12\" r=\"3\" />", "milk": "<path d=\"M8 2h8\" /> <path d=\"M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2\" /> <path d=\"M7 15a6.472 6.472 0 0 1 5 0 6.47 6.47 0 0 0 5 0\" />", "candy": "<path d=\"m9.5 7.5-2 2a4.95 4.95 0 1 0 7 7l2-2a4.95 4.95 0 1 0-7-7Z\" /> <path d=\"M14 6.5v10\" /> <path d=\"M10 7.5v10\" /> <path d=\"m16 7 1-5 1.37.68A3 3 0 0 0 19.7 3H21v1.3c0 .46.1.92.32 1.33L22 7l-5 1\" /> <path d=\"m8 17-1 5-1.37-.68A3 3 0 0 0 4.3 21H3v-1.3a3 3 0 0 0-.32-1.33L2 17l5-1\" />", "beef": "<circle cx=\"12.5\" cy=\"8.5\" r=\"2.5\" /> <path d=\"M12.5 2a6.5 6.5 0 0 0-6.22 4.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3A6.5 6.5 0 0 0 12.5 2Z\" /> <path d=\"m18.5 6 2.19 4.5a6.48 6.48 0 0 1 .31 2 6.49 6.49 0 0 1-2.6 5.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5\" />", "glass-water": "<path d=\"M5.116 4.104A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .994 1.105L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z\" /> <path d=\"M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0\" />", "chevron-left": "<path d=\"m15 18-6-6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "dumbbell": "<path d=\"M14.4 14.4 9.6 9.6\" /> <path d=\"M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z\" /> <path d=\"m21.5 21.5-1.4-1.4\" /> <path d=\"M3.9 3.9 2.5 2.5\" /> <path d=\"M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z\" />", "bike": "<circle cx=\"18.5\" cy=\"17.5\" r=\"3.5\" /> <circle cx=\"5.5\" cy=\"17.5\" r=\"3.5\" /> <circle cx=\"15\" cy=\"5\" r=\"1\" /> <path d=\"M12 17.5V14l-3-3 4-3 2 3h2\" />", "moon": "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\" />", "circle-check": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"m9 12 2 2 4-4\" />", "list-checks": "<path d=\"m3 17 2 2 4-4\" /> <path d=\"m3 7 2 2 4-4\" /> <path d=\"M13 6h8\" /> <path d=\"M13 12h8\" /> <path d=\"M13 18h8\" />", "flame": "<path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\" />", "zap": "<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />", "trophy": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\" /> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\" /> <path d=\"M4 22h16\" /> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\" /> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\" /> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "calendar": "<path d=\"M8 2v4\" /> <path d=\"M16 2v4\" /> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /> <path d=\"M3 10h18\" />", "sparkles": "<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /> <path d=\"M20 3v4\" /> <path d=\"M22 5h-4\" /> <path d=\"M4 17v2\" /> <path d=\"M5 18H3\" />", "log-out": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\" /> <polyline points=\"16 17 21 12 16 7\" /> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\" />"};
 const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24">${ICONS[n] || ''}</svg>`;
 
 const SB_URL = 'https://gaispiegmuhbgjxuudtw.supabase.co';
@@ -274,7 +295,8 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const vibrar = () => { try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} };
 
 // ---------- estado ----------
-const S = { dia: hojeISO(), tab: ['inicio', 'nutricao', 'remedios', 'check'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', metas: {}, fav: [], rec: [], rem: [] };
+const TABS = ['inicio', 'nutricao', 'treino', 'check', 'remedios', 'corpo', 'sono'];
+const S = { dia: hojeISO(), tab: TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', metas: {}, fav: [], rec: [], rem: [] };
 const $ = id => document.getElementById(id);
 const view = $('view');
 
@@ -335,18 +357,19 @@ async function iniciar() {
 
 // ---------- navegação ----------
 $('prev').innerHTML = ic('chevron-left'); $('next').innerHTML = ic('chevron-right');
-const NAV = { inicio: ['house', 'Início'], nutricao: ['utensils', 'Nutrição'], remedios: ['pill', 'Remédios'], check: ['list-checks', 'Check'] };
-document.querySelectorAll('nav button').forEach(b => { b.innerHTML = ic(NAV[b.dataset.tab][0]) + NAV[b.dataset.tab][1]; b.classList.toggle('on', b.dataset.tab === S.tab); });
+const NAV = { inicio: ['house', 'Início'], nutricao: ['utensils', 'Nutrição'], treino: ['dumbbell', 'Treino'], check: ['list-checks', 'Check'], mais: ['layout-grid', 'Mais'] };
+const navTab = t => NAV[t] ? t : 'mais';
+function marcarNav() { document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === navTab(S.tab))); }
+document.querySelectorAll('nav button').forEach(b => { b.innerHTML = ic(NAV[b.dataset.tab][0]) + NAV[b.dataset.tab][1]; });
+marcarNav();
+function irPara(t) { S.tab = t; vibrar(); marcarNav(); history.replaceState(null, '', '#' + t); window.scrollTo(0, 0); render(); }
 function setDia(iso) { S.dia = iso; vibrar(); render(); }
 $('prev').onclick = () => setDia(addDias(S.dia, -1));
 $('next').onclick = () => setDia(addDias(S.dia, 1));
 $('hoje').onclick = () => setDia(hojeISO());
 $('dPick').onchange = e => e.target.value && setDia(e.target.value);
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  S.tab = b.dataset.tab; vibrar();
-  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
-  window.scrollTo(0, 0); render();
-});
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => b.dataset.tab === 'mais' ? abrirMais() : irPara(b.dataset.tab));
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (TABS.includes(t) && t !== S.tab) irPara(t); });
 // arrastar para os lados também troca o dia
 let tx = null, ty = null;
 document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
@@ -381,7 +404,14 @@ async function carregarDia(iso) {
   const diario = semana.find(d => d.data === iso) || null;
   let seq = null;
   if (S.tab === 'inicio' && iso <= hojeISO()) { const r = await sb.rpc('app_sequencias', { p_data: iso }); seq = r.data || null; }
-  return { ref, agua, remlog, plano, cardio, treinos, sono, diario, semana, notas, casa, planoRef, seq };
+  const X = { ref, agua, remlog, plano, cardio, treinos, sono, diario, semana, notas, casa, planoRef, seq };
+  if (S.tab === 'treino' && !S.midia) { const r = await sb.from('exercicios_midia').select('*'); S.midia = r.data || []; }
+  if (S.tab === 'corpo') {
+    const [p, m] = await Promise.all([sb.from('peso').select('*').lte('data', iso).order('data').order('id'), sb.from('medidas_corporais').select('*').lte('data', iso).order('data').order('id')]);
+    X.pesos = p.data || []; X.medidas = m.data || [];
+  }
+  if (S.tab === 'sono') { const r = await sb.from('sono').select('*').gte('data', addDias(iso, -13)).lte('data', iso).order('data'); X.sonos = r.data || []; }
+  return X;
 }
 function somaMacros(ref) {
   const t = { kcal: 0, p: 0, c: 0, g: 0 };
@@ -401,7 +431,7 @@ async function render() {
   try {
     const D = await carregarDia(S.dia);
     if (id !== renderId) return;
-    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios, check: telaCheck })[S.tab](D) + '</div>';
+    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios, check: telaCheck, treino: telaTreino, corpo: telaCorpo, sono: telaSono })[S.tab](D) + '</div>';
     animar();
     ligarEventos(D);
     const nb = document.querySelector('nav button[data-tab="check"]'), pc = S.dia <= hojeISO() ? pendentesCheck(D) : 0;
@@ -492,7 +522,7 @@ function telaInicio(D) {
       <div class="grow"><div class="title">Calistenia</div><div class="muted">${cal.map(e => esc(e.exercicio) + ' ' + e.series + '×' + e.reps).join(' · ') || 'registrada'}</div></div>
       ${caliFeita ? '<span class="chip ok">feita</span>' : '<span class="chip">a fazer</span>'}</div>`;
   }
-  html += `<div class="card"><h2><span class="t">${ic('zap')} Treino</span></h2>${tr || '<p class="muted">Sem treino planejado nem registrado.</p>'}</div>`;
+  html += `<div class="card tap" data-go="treino"><h2><span class="t">${ic('zap')} Treino</span><small>›</small></h2>${tr || '<p class="muted">Sem treino planejado nem registrado.</p>'}</div>`;
 
   // remédios
   html += `<div class="card tap" data-go="remedios"><h2><span class="t">${ic('pill')} Remédios</span><small>${rem.filter(l => l.log && l.log.status === 'tomado').length}/${rem.length}</small></h2>
@@ -708,6 +738,236 @@ async function salvarSono(qual) {
   render();
 }
 
+// ---------- Treino ----------
+const IMG_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+function midiaDe(nome) {
+  const n = (nome || '').toLowerCase();
+  return (S.midia || []).filter(m => n.includes(m.chave)).sort((a, b) => b.chave.length - a.chave.length)[0] || null;
+}
+const ytLink = nome => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(nome + ' execução correta shorts');
+function progKey() { return 'vinek-series-' + S.dia; }
+function lerProg() { try { return JSON.parse(localStorage.getItem(progKey()) || '{}'); } catch (e) { return {}; } }
+function gravarProg(p) { try { localStorage.setItem(progKey(), JSON.stringify(p)); } catch (e) {} }
+
+function telaTreino(D) {
+  const plano = D.plano || {};
+  const bike = D.cardio.find(c => c.modalidade === 'bike');
+  const cal = Array.isArray(plano.calistenia) ? plano.calistenia : [];
+  const feito = D.treinos[0];
+  const prog = lerProg();
+  let html = `<div class="card spec"><div class="who">${ic('sparkles')} PERSONAL</div><p>${resumoPersonal(D, cal, bike, feito)}</p></div>`;
+
+  // bike
+  html += `<div class="card"><h2><span class="t">${ic('bike')} Bike</span><small>${plano.bike ? `${fmt(plano.bike.minutos)} min · alvo ${fmt(plano.bike.km_alvo, 1)} km` : ''}</small></h2>`;
+  if (bike) html += `<div class="row"><div class="tile" style="background:#3cf28a1a;color:var(--kcal)">${ic('circle-check')}</div><div class="grow"><div class="title">${fmt(bike.minutos)} min · ${fmt(bike.km, 2)} km</div>
+    <div class="muted">${bike.velocidade_kmh ? fmt(bike.velocidade_kmh, 1) + ' km/h · ' : ''}esforço ${bike.esforco ?? '—'}</div></div><span class="chip ok">feita</span></div>`;
+  else html += `<form id="fBike"><div class="two"><div><label>Minutos</label><input id="bMin" inputmode="decimal" value="${plano.bike ? plano.bike.minutos : 30}"></div>
+    <div><label>Km</label><input id="bKm" inputmode="decimal" placeholder="ex.: 9,1"></div></div>
+    <label>Esforço</label><div class="opts esc">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<button type="button" class="opt" data-besf="${n}">${n}</button>`).join('')}</div>
+    <p class="muted">Kcal do aparelho é só referência, não libera comida.</p></form>`;
+  html += `</div>`;
+
+  // calistenia
+  if (cal.length) {
+    html += `<div class="card"><h2><span class="t">${ic('dumbbell')} Calistenia</span><small>${esc(plano.observacoes ? plano.observacoes.split('|')[0] : '')}</small></h2>`;
+    cal.forEach((e, i) => {
+      const m = midiaDe(e.exercicio);
+      const feitas = prog[i] || 0;
+      html += `<div class="ex">
+        ${m && m.img_id ? `<div class="anim"><img src="${IMG_BASE}${m.img_id}/0.jpg" alt=""><img src="${IMG_BASE}${m.img_id}/1.jpg" alt=""></div>` : ''}
+        <div class="exb"><div class="title">${esc(e.exercicio)}</div>
+          <div class="muted">${e.series}×${e.reps ?? e.tempo_s + 's'} · descanso ${e.descanso_s || 60}s · esforço alvo ${e.esforco_alvo ?? '—'}</div>
+          ${m && m.dica ? `<div class="muted" style="color:var(--ink);margin-top:4px">${esc(m.dica)}</div>` : ''}
+          <div class="series">${Array.from({ length: e.series }, (_, s) => `<button class="sr ${s < feitas ? 'on' : ''}" data-serie="${i}" data-s="${s}">${s + 1}</button>`).join('')}
+            <a class="yt" href="${ytLink(e.exercicio)}" target="_blank" rel="noopener">${ic('youtube')} vídeo</a></div>
+        </div></div>`;
+    });
+    if (feito) html += `<div class="row"><div class="grow muted">Treino registrado: ${esc(feito.descricao || feito.tipo)} · esforço ${feito.esforco ?? '—'}</div><span class="chip ok">feito</span></div>`;
+    else html += `<div style="margin-top:12px"><label>Esforço geral do treino</label><div class="opts esc">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<button class="opt" data-tesf="${n}">${n}</button>`).join('')}</div>
+      <p class="muted">Toque no esforço para concluir e salvar o treino.</p></div>`;
+    html += `</div>`;
+  } else if (!feito) html += `<div class="card"><p class="muted">Sem calistenia planejada para este dia.</p></div>`;
+
+  // cronômetro
+  html += `<div class="card"><h2><span class="t">${ic('timer')} Cronômetro</span></h2>
+    <div class="opts">${[30, 45, 60, 90, 120].map(s => `<button class="opt" data-timer="${s}">${s}s</button>`).join('')}<button class="opt" data-crono="1">${ic('play')} livre</button></div></div>`;
+  return html;
+}
+function resumoPersonal(D, cal, bike, feito) {
+  if (S.dia > hojeISO()) return cal.length ? `Plano de ${cal.length} exercícios para esse dia. Descanse bem antes.` : 'Sem plano para esse dia ainda.';
+  if (bike && feito) return 'Bike e calistenia feitas. Dia de treino fechado 💪';
+  if (!bike && !feito) return 'Nada feito ainda. Comece pela bike e emende a calistenia.';
+  if (!bike) return 'Calistenia feita, falta a bike de 30 min.';
+  return cal.length ? `Bike feita. Agora a calistenia: ${cal.length} exercícios, toque em cada série ao terminar.` : 'Bike feita. Hoje não tem calistenia.';
+}
+
+// timer flutuante (descanso e cronômetro livre)
+const T = { fim: 0, ini: 0, livre: false, id: null };
+function iniciarTimer(seg) { T.livre = false; T.fim = Date.now() + seg * 1000; mostrarTimer(); }
+function iniciarCrono() { T.livre = true; T.ini = Date.now(); mostrarTimer(); }
+function pararTimer() { clearInterval(T.id); T.id = null; $('timer').classList.add('hidden'); }
+function bip() {
+  try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, .25, .5].forEach(t => { const o = a.createOscillator(); o.frequency.value = 880; o.connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + .15); }); } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate([200, 100, 200, 100, 300]); } catch (e) {}
+}
+function mostrarTimer() {
+  $('timer').classList.remove('hidden'); clearInterval(T.id);
+  const tick = () => {
+    const ms = T.livre ? Date.now() - T.ini : T.fim - Date.now();
+    if (!T.livre && ms <= 0) { $('tmV').textContent = '0:00'; bip(); toast('⏱️ Descanso acabou, bora!'); pararTimer(); return; }
+    const s = Math.ceil(Math.abs(ms) / 1000) - (T.livre ? 1 : 0);
+    $('tmV').textContent = Math.floor(s / 60) + ':' + pad(s % 60);
+    $('tmL').textContent = T.livre ? 'cronômetro' : 'descanso';
+  };
+  tick(); T.id = setInterval(tick, 250);
+}
+
+async function salvarBike(esf) {
+  const num = id => parseFloat(($(id).value || '').replace(',', '.'));
+  const min = num('bMin'), km = num('bKm');
+  if (!(min > 0)) return toast('Informe os minutos');
+  vibrar();
+  const row = { data: S.dia, modalidade: 'bike', minutos: min, km: km > 0 ? km : null, esforco: esf, local: 'casa',
+    velocidade_kmh: km > 0 ? Math.round(km / (min / 60) * 100) / 100 : null, observacoes: 'registrado pelo app' };
+  const { data, error } = await sb.from('cardio').insert(row).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ Bike ${fmt(min)} min`, () => sb.from('cardio').delete().eq('id', data.id));
+  render();
+}
+async function salvarTreino(D, esf) {
+  const plano = D.plano || {}, cal = plano.calistenia || [], prog = lerProg();
+  vibrar();
+  const ex = cal.map((e, i) => ({ exercicio: e.exercicio, series: prog[i] ?? e.series, repeticoes: e.reps ?? null, ...(e.tempo_s ? { tempo_s: e.tempo_s } : {}) }));
+  const desc = plano.observacoes ? plano.observacoes.split('|')[0].trim().split('.')[0] : 'Calistenia';
+  const incompleto = cal.some((e, i) => (prog[i] ?? e.series) < e.series);
+  const row = { data: S.dia, tipo: 'calistenia', descricao: desc, exercicios: ex, esforco: esf,
+    observacoes: 'registrado pelo app' + (incompleto ? '; séries marcadas no app (algumas incompletas)' : '') };
+  const { data, error } = await sb.from('treinos').insert(row).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ Treino salvo · esforço ${esf}`, () => sb.from('treinos').delete().eq('id', data.id));
+  render();
+}
+
+// ---------- Corpo (peso e medidas) ----------
+const navy = (cint, pesc, alt) => 495 / (1.0324 - 0.19077 * Math.log10(cint - pesc) + 0.15456 * Math.log10(alt)) - 450;
+function telaCorpo(D) {
+  const P = D.pesos || [], M = D.medidas || [];
+  const alvo = metaNum('peso_alvo_kg', 75);
+  const ult = P[P.length - 1], prim = P[0], ant = P[P.length - 2];
+  let html = '';
+  if (ult) {
+    const perdeu = prim.peso_kg - ult.peso_kg, total = prim.peso_kg - alvo, pct = Math.max(0, Math.min(100, perdeu / total * 100));
+    const dAnt = ant ? ult.peso_kg - ant.peso_kg : null;
+    html += `<div class="card score" style="--glow:#3cf28a22"><h2><span class="t">${ic('scale')} Peso</span><small>${ult.data.slice(8, 10)}/${ult.data.slice(5, 7)}${ult.oficial ? ' · oficial' : ''}</small></h2>
+      <div style="text-align:center"><span style="font-size:56px;font-weight:900;letter-spacing:-.04em" class="num">${fmt(ult.peso_kg, 2)}</span> <span class="muted">kg</span></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Vs anterior</div><div class="v num" style="color:${dAnt == null ? 'inherit' : dAnt <= 0 ? 'var(--ok)' : 'var(--bad)'}">${dAnt == null ? '—' : (dAnt <= 0 ? '▼ ' : '▲ ') + fmt(Math.abs(dAnt), 2)}</div></div>
+        <div class="stat"><div class="k">Desde o início</div><div class="v num" style="color:${perdeu >= 0 ? 'var(--ok)' : 'var(--bad)'}">${perdeu >= 0 ? '▼ ' : '▲ '}${fmt(Math.abs(perdeu), 2)}</div></div>
+      </div>
+      <div class="slim" style="margin-top:14px"><div class="top"><span class="muted">Caminho até ${fmt(alvo)} kg</span><span class="num"><b>${fmt(pct)}%</b> <span class="muted">· faltam ${fmt(ult.peso_kg - alvo, 1)} kg</span></span></div>
+        <div class="track" style="height:12px"><i style="background:linear-gradient(90deg,#3cf28a,#31c8ff)" data-w="${pct}%"></i></div></div>
+      ${graficoPeso(P, alvo)}
+    </div>`;
+  }
+  const terca = new Date(S.dia + 'T12:00:00Z').getUTCDay() === 2;
+  html += `<div class="card"><h2><span class="t">${ic('plus')} Nova pesagem</span><small>${terca ? 'terça: oficial' : 'extra (não oficial)'}</small></h2>
+    <div class="inl"><input id="pKg" inputmode="decimal" placeholder="kg (ex.: 89,2)"><button class="btn small" id="pSalvar">Salvar</button></div>
+    <p class="muted">Oficial: terça às 6h, em jejum e depois do banheiro.</p></div>`;
+
+  // medidas
+  const mu = M[M.length - 1], m1 = M[0], ma = M[M.length - 2];
+  const CAMPOS = [['cintura_cm', 'Cintura'], ['quadril_cm', 'Quadril'], ['coxa_cm', 'Coxa E'], ['braco_cm', 'Braço E'], ['peito_cm', 'Peito'], ['pescoco_cm', 'Pescoço'], ['gordura_pct', '% gordura']];
+  if (mu) {
+    const d = (a, b, k) => a && b ? +a[k] - +b[k] : null;
+    const cel = (v, bom) => v == null ? '<td class="muted">—</td>' : `<td class="num" style="color:${v === 0 ? 'var(--muted)' : (v < 0) === bom ? 'var(--ok)' : 'var(--bad)'}">${v > 0 ? '+' : ''}${fmt(v, 1)}</td>`;
+    html += `<div class="card"><h2><span class="t">${ic('ruler')} Medidas</span><small>nº ${M.length} · ${mu.data.slice(8, 10)}/${mu.data.slice(5, 7)}</small></h2>
+      <table class="tb"><tr><th></th><th>Atual</th><th>Vs ant.</th><th>Vs 1ª</th></tr>
+      ${CAMPOS.map(([k, n]) => { const bom = k !== 'braco_cm' && k !== 'peito_cm'; return `<tr><td>${n}</td><td class="num"><b>${fmt(mu[k], 1)}</b></td>${cel(d(mu, ma, k), bom)}${cel(d(mu, m1, k), bom)}</tr>`; }).join('')}</table>
+      <p class="muted">Braço e peito: subir é bom (músculo). Próximas medidas: a cada 2 terças.</p></div>`;
+  }
+  html += `<div class="card"><h2><span class="t">${ic('plus')} Novas medidas</span><small>cm</small></h2>
+    <div class="two">${CAMPOS.slice(0, 6).map(([k, n]) => `<div><label>${n}</label><input id="m_${k}" inputmode="decimal"></div>`).join('')}</div>
+    <p class="muted">Cintura na altura do umbigo. Coxa e braço sempre do lado ESQUERDO. O % de gordura é calculado (US Navy).</p>
+    <button class="btn" style="width:100%" id="mSalvar">Salvar medidas</button></div>`;
+  return html;
+}
+function graficoPeso(P, alvo) {
+  if (P.length < 2) return '';
+  const W = 320, H = 150, pl = 30, pr = 10, pt = 10, pb = 22;
+  const xs = P.map(p => new Date(p.data).getTime()), x0 = xs[0], x1 = Math.max(xs[xs.length - 1], x0 + 864e5);
+  const ys = P.map(p => +p.peso_kg), y0 = Math.min(alvo, ...ys) - 1, y1 = Math.max(...ys) + 1;
+  const X = t => pl + (t - x0) / (x1 - x0) * (W - pl - pr), Y = v => pt + (y1 - v) / (y1 - y0) * (H - pt - pb);
+  const linha = P.map((p, i) => `${i ? 'L' : 'M'}${X(xs[i]).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
+  const ticks = [y0 + 1, (y0 + y1) / 2, y1 - 1].map(v => Math.round(v));
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;margin-top:14px">
+    ${ticks.map(v => `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1a2029"/><text x="${pl - 6}" y="${Y(v) + 4}" text-anchor="end" fill="#5b6472" font-size="10">${v}</text>`).join('')}
+    <line x1="${pl}" x2="${W - pr}" y1="${Y(alvo)}" y2="${Y(alvo)}" stroke="#3cf28a" stroke-dasharray="4 4" opacity=".6"/>
+    <text x="${W - pr}" y="${Y(alvo) - 5}" text-anchor="end" fill="#3cf28a" font-size="10" font-weight="700">meta ${alvo}</text>
+    <path d="${linha}" fill="none" stroke="#31c8ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px #31c8ff88)"/>
+    ${P.map((p, i) => `<circle cx="${X(xs[i])}" cy="${Y(ys[i])}" r="${p.oficial ? 4.5 : 3}" fill="${p.oficial ? '#31c8ff' : '#0f1318'}" stroke="#31c8ff" stroke-width="2"/>`).join('')}
+    <text x="${X(xs[0])}" y="${H - 6}" fill="#5b6472" font-size="10">${P[0].data.slice(8, 10)}/${P[0].data.slice(5, 7)}</text>
+    <text x="${X(xs[xs.length - 1])}" y="${H - 6}" text-anchor="end" fill="#5b6472" font-size="10">${P[P.length - 1].data.slice(8, 10)}/${P[P.length - 1].data.slice(5, 7)}</text>
+  </svg>`;
+}
+async function salvarPeso() {
+  const kg = parseFloat(($('pKg').value || '').replace(',', '.'));
+  if (!(kg > 30 && kg < 250)) return toast('Peso inválido');
+  vibrar();
+  const oficial = new Date(S.dia + 'T12:00:00Z').getUTCDay() === 2;
+  const { data, error } = await sb.from('peso').insert({ data: S.dia, peso_kg: kg, oficial, observacoes: 'registrado pelo app' }).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ ${fmt(kg, 2)} kg${oficial ? ' (oficial)' : ''}`, () => sb.from('peso').delete().eq('id', data.id));
+  render();
+}
+async function salvarMedidas() {
+  const v = k => { const n = parseFloat(($('m_' + k).value || '').replace(',', '.')); return n > 0 ? n : null; };
+  const row = { data: S.dia, cintura_cm: v('cintura_cm'), quadril_cm: v('quadril_cm'), coxa_cm: v('coxa_cm'), braco_cm: v('braco_cm'), peito_cm: v('peito_cm'), pescoco_cm: v('pescoco_cm'),
+    altura_cm: metaNum('altura_cm', 180), medido_em: agoraNoDia(S.dia), fotos_tiradas: false, observacoes: 'registrado pelo app. Coxa e braço ESQUERDOS' };
+  if (!row.cintura_cm || !row.pescoco_cm) return toast('Cintura e pescoço são obrigatórios (para o % de gordura)');
+  row.gordura_pct = Math.round(navy(row.cintura_cm, row.pescoco_cm, row.altura_cm) * 10) / 10;
+  vibrar();
+  const { data, error } = await sb.from('medidas_corporais').insert(row).select('id').single();
+  if (error) return erro(error);
+  toast(`✓ Medidas salvas · ${fmt(row.gordura_pct, 1)}% gordura`, () => sb.from('medidas_corporais').delete().eq('id', data.id));
+  render();
+}
+
+// ---------- Sono ----------
+function telaSono(D) {
+  const L = D.sonos || [];
+  const dias = []; for (let i = 13; i >= 0; i--) { const dd = addDias(S.dia, -i); dias.push({ dd, s: L.find(x => x.data === dd) }); }
+  const com = L.filter(s => s.horas != null && s.data > addDias(S.dia, -7));
+  const media = com.length ? com.reduce((a, s) => a + +s.horas, 0) / com.length : null;
+  const mq = com.filter(s => s.qualidade).length ? com.reduce((a, s) => a + (+s.qualidade || 0), 0) / com.filter(s => s.qualidade).length : null;
+  const max = 10;
+  let html = `<div class="card score" style="--glow:#c86bff22"><h2><span class="t">${ic('moon')} Sono</span><small>últimos 14 dias</small></h2>
+    <div class="stats" style="margin-top:0">
+      <div class="stat"><div class="k">Média 7 dias</div><div class="v num" style="color:${media == null ? 'inherit' : media >= 7 ? 'var(--ok)' : media >= 6 ? 'var(--carb)' : 'var(--bad)'}">${media == null ? '—' : fmt(media, 1) + ' h'}</div></div>
+      <div class="stat"><div class="k">Qualidade média</div><div class="v num">${mq == null ? '—' : fmt(mq, 1) + '/5'}</div></div></div>
+    <div class="spark" style="height:130px;position:relative">${dias.map(({ dd, s }) => {
+      const h = s && s.horas != null ? +s.horas : null;
+      const cor = h == null ? '#1a2029' : h >= 7 ? '#3cf28a' : h >= 6 ? '#ffd23f' : '#ff4d5e';
+      return `<div class="${dd === S.dia ? 'cur' : ''}"><em>${h == null ? '' : fmt(h, 1)}</em><i style="height:0;background:${cor}" data-h="${h == null ? 3 : h / max * 100}%"></i><span>${'DSTQQSS'[new Date(dd + 'T12:00:00Z').getUTCDay()]}</span></div>`;
+    }).join('')}</div>
+    <p class="muted">Verde: 7h ou mais. Fim de semana não tem horário fixo.</p></div>`;
+  const s = D.sono;
+  html += `<div class="card"><h2><span class="t">${ic('bed')} Noite de ${rotuloData(S.dia).d.toLowerCase()}</span></h2>${s
+    ? `<div class="row"><div class="grow"><span style="font-size:28px;font-weight:900">${fmt(s.horas, 1)}</span> <span class="muted">horas</span>${s.lembrou_sonho ? '<div class="muted">lembrou do sonho' + (s.sonho_descricao ? ': ' + esc(s.sonho_descricao) : '') + '</div>' : ''}</div><span class="chip ${s.qualidade >= 4 ? 'ok' : s.qualidade <= 2 ? 'bad' : 'warn'}">qualidade ${s.qualidade ?? '—'}/5</span></div>`
+    : '<p class="muted">Sem registro. Registre pela aba Check (horas e qualidade em 2 toques).</p>'}</div>`;
+  return html;
+}
+
+// ---------- menu "Mais" ----------
+function abrirMais() {
+  const it = [['remedios', 'pill', 'Remédios', 'var(--gord)'], ['corpo', 'scale', 'Peso e medidas', 'var(--agua)'], ['sono', 'moon', 'Sono', 'var(--gord)']];
+  const breve = [['wallet', 'Finanças'], ['house', 'Casa'], ['youtube', 'YouTube']];
+  $('shTitle').textContent = 'Mais';
+  $('shBody').innerHTML = `<div class="grid">${it.map(([t, i, n, c]) => `<button class="qb" data-mais="${t}"><div class="ic" style="background:#ffffff0d;color:${c}">${ic(i)}</div><div class="n">${n}</div></button>`).join('')}
+    ${breve.map(([i, n]) => `<div class="qb" style="opacity:.4"><div class="ic">${ic(i)}</div><div class="n">${n}</div><div class="k">em breve</div></div>`).join('')}</div>`;
+  $('sheet').classList.remove('hidden');
+  $('shBody').querySelectorAll('[data-mais]').forEach(b => b.onclick = () => { $('sheet').classList.add('hidden'); irPara(b.dataset.mais); });
+}
+
 // ---------- Nutrição ----------
 function tipoPorHora(h) { return h < 10.5 ? 'lanche_manha' : h < 14.5 ? 'almoco' : h < 17 ? 'lanche' : h < 20.5 ? 'jantar' : 'ceia'; }
 const TIPOS = { cafe: 'Café da manhã', lanche_manha: 'Lanche da manhã', almoco: 'Almoço', lanche: 'Lanche', jantar: 'Janta', ceia: 'Ceia', bebida: 'Bebida', alcool: 'Álcool', outro: 'Outro' };
@@ -822,6 +1082,7 @@ async function abrirRepetir() {
   const vistos = new Set(), lista = (data || []).filter(r => r.kcal != null && !vistos.has(r.descricao) && vistos.add(r.descricao));
   $('shBody').innerHTML = lista.length ? lista.map((r, i) => `<button class="rp" data-rp="${i}"><span><b>${TIPOS[r.tipo] || r.tipo}</b> <span class="muted">${r.data_hora.slice(8, 10)}/${r.data_hora.slice(5, 7)}</span><div class="muted">${esc(r.descricao)}</div></span><b class="num" style="white-space:nowrap">${fmt(r.kcal)} kcal</b></button>`).join('')
     : '<p class="muted">Nada nos últimos 7 dias.</p>';
+  $('shTitle').textContent = 'Repetir refeição';
   $('sheet').classList.remove('hidden');
   $('shBody').querySelectorAll('[data-rp]').forEach(b => b.onclick = async () => {
     const r = lista[+b.dataset.rp];
@@ -835,6 +1096,8 @@ async function abrirRepetir() {
   });
 }
 $('shClose').onclick = () => $('sheet').classList.add('hidden');
+$('tmStop').onclick = pararTimer;
+$('tmMais').onclick = () => { if (T.livre) return; T.fim += 15000; vibrar(); };
 $('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').classList.add('hidden'); };
 
 // ---------- Remédios ----------
@@ -887,7 +1150,7 @@ async function desfazerDose(logId, remId, status) {
 function ligarEventos(D) {
   view.querySelectorAll('[data-go]').forEach(el => el.onclick = e => {
     if (e.target.closest('button')) return;
-    document.querySelector(`nav button[data-tab="${el.dataset.go}"]`).click();
+    irPara(el.dataset.go);
   });
   view.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => registrarFav(S.fav.find(f => f.id == b.dataset.fav), b));
   view.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => registrarAgua(S.rec.find(r => r.id == b.dataset.rec), b));
@@ -936,6 +1199,19 @@ function ligarEventos(D) {
     await desfazerDose(+b.dataset.dellog, +b.dataset.rem, b.dataset.st); render();
   });
   const br = $('btnRepetir'); if (br) br.onclick = abrirRepetir;
+  view.querySelectorAll('[data-besf]').forEach(b => b.onclick = () => salvarBike(+b.dataset.besf));
+  view.querySelectorAll('[data-tesf]').forEach(b => b.onclick = () => salvarTreino(D, +b.dataset.tesf));
+  view.querySelectorAll('[data-serie]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.serie, s = +b.dataset.s, p = lerProg();
+    const novo = (p[i] || 0) > s ? s : s + 1; p[i] = novo; gravarProg(p); vibrar();
+    b.parentNode.querySelectorAll('.sr').forEach((x, k) => x.classList.toggle('on', k < novo));
+    const e = (D.plano.calistenia || [])[i];
+    if (novo > s && e && novo < e.series) iniciarTimer(e.descanso_s || 60);
+  });
+  view.querySelectorAll('[data-timer]').forEach(b => b.onclick = () => { vibrar(); iniciarTimer(+b.dataset.timer); });
+  view.querySelectorAll('[data-crono]').forEach(b => b.onclick = () => { vibrar(); iniciarCrono(); });
+  if ($('pSalvar')) $('pSalvar').onclick = salvarPeso;
+  if ($('mSalvar')) $('mSalvar').onclick = salvarMedidas;
   if ($('pushOn')) $('pushOn').onclick = ligarPush;
   if ($('pushOff')) $('pushOff').onclick = desligarPush;
   if ($('pushTeste')) $('pushTeste').onclick = testarPush;
