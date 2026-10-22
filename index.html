@@ -51,7 +51,7 @@ main{padding:6px 16px calc(100px + env(safe-area-inset-bottom));max-width:640px;
 /* herói com anéis */
 .hero{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
 .rings{width:150px;height:150px}
-.rings circle,.minis circle{fill:none;stroke-linecap:round}
+.rings circle,.minis circle,.prog circle{fill:none;stroke-linecap:round}
 .ring-fg{transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)}
 .legend .it{margin-bottom:10px}
 .legend .lab{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
@@ -142,6 +142,24 @@ nav{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-b
   background:rgba(17,21,27,.86);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:24px;display:flex;padding:6px}
 nav button{flex:1;border:0;background:transparent;padding:8px 0;font-size:11px;font-weight:700;color:var(--dim);border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav button.on{color:#04140b;background:var(--kcal)}
+nav button{position:relative}
+nav button .dot{position:absolute;top:4px;right:calc(50% - 20px);min-width:16px;height:16px;border-radius:99px;background:var(--prot);color:#fff;font-size:10px;line-height:16px;padding:0 4px}
+.q{padding:14px 0}
+.q+.q{border-top:1px solid var(--line)}
+.q .qt{font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;gap:8px}
+.q .qt small{color:var(--dim);font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:9px 12px;font-weight:700;font-size:14px;min-width:40px}
+.opt.sel{background:var(--kcal);color:#04140b;border-color:var(--kcal)}
+.opt:active{transform:scale(.93)}
+.opts.esc .opt{flex:1 0 calc(16.66% - 6px);padding:9px 0;min-width:0}
+.inl{display:flex;gap:8px;margin-top:8px}
+.inl input{flex:1}
+.done{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line);gap:8px}
+.done .v{font-weight:700;color:var(--kcal);text-align:right}
+.prog{display:flex;align-items:center;gap:14px}
+.prog svg{width:64px;height:64px;flex:none}
+.prog .big{font-size:26px;font-weight:900}
 
 #toast{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:9;background:#1a2029;border:1px solid #2a323e;color:#fff;
   border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;max-width:560px;margin:0 auto;font-weight:600;
@@ -194,6 +212,7 @@ input:focus,select:focus{outline:2px solid #3cf28a66;border-color:transparent}
     <button data-tab="inicio" class="on"></button>
     <button data-tab="nutricao"></button>
     <button data-tab="remedios"></button>
+    <button data-tab="check"></button>
   </nav>
 </div>
 
@@ -301,7 +320,7 @@ async function iniciar() {
 
 // ---------- navegação ----------
 $('prev').innerHTML = ic('chevron-left'); $('next').innerHTML = ic('chevron-right');
-const NAV = { inicio: ['house', 'Início'], nutricao: ['utensils', 'Nutrição'], remedios: ['pill', 'Remédios'] };
+const NAV = { inicio: ['house', 'Início'], nutricao: ['utensils', 'Nutrição'], remedios: ['pill', 'Remédios'], check: ['list-checks', 'Check'] };
 document.querySelectorAll('nav button').forEach(b => b.innerHTML = ic(NAV[b.dataset.tab][0]) + NAV[b.dataset.tab][1]);
 function setDia(iso) { S.dia = iso; vibrar(); render(); }
 $('prev').onclick = () => setDia(addDias(S.dia, -1));
@@ -337,7 +356,7 @@ async function carregarDia(iso) {
     sb.from('cardio').select('*').eq('data', iso),
     sb.from('treinos').select('*').eq('data', iso),
     sb.from('sono').select('*').eq('data', iso).maybeSingle(),
-    sb.from('diario').select('nota_final,data,notas_categorias').gte('data', addDias(iso, -6)).lte('data', iso).order('data'),
+    sb.from('diario').select('*').gte('data', addDias(iso, -6)).lte('data', iso).order('data'),
     sb.from('notas').select('*').eq('concluido', false).in('tipo', ['tarefa', 'lembrete', 'ajuste_casa']).order('prazo', { nullsFirst: false }),
     sb.from('casa_tarefas').select('*').eq('ativo', true).lte('proxima', iso).order('proxima'),
     sb.from('plano_refeicoes').select('*').eq('data', iso).order('id'),
@@ -365,9 +384,12 @@ async function render() {
   try {
     const D = await carregarDia(S.dia);
     if (id !== renderId) return;
-    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios })[S.tab](D) + '</div>';
+    view.innerHTML = '<div class="fade">' + ({ inicio: telaInicio, nutricao: telaNutricao, remedios: telaRemedios, check: telaCheck })[S.tab](D) + '</div>';
     animar();
     ligarEventos(D);
+    const nb = document.querySelector('nav button[data-tab="check"]'), pc = S.dia <= hojeISO() ? pendentesCheck(D) : 0;
+    let dot = nb.querySelector('.dot'); if (!dot) { dot = document.createElement('span'); dot.className = 'dot'; nb.appendChild(dot); }
+    dot.textContent = pc; dot.classList.toggle('hidden', !pc || horaAgora() < 17 && S.dia === hojeISO());
   } catch (e) { erro(e); }
 }
 // anéis e barras começam vazios e enchem depois de desenhados
@@ -514,6 +536,109 @@ function cardNota(D) {
     ${cats.length ? `<div class="cats">${cats.map(([k, v]) => `<div class="c"><span class="muted">${esc(k)}</span>
       <div class="track" style="height:6px"><i style="background:${corNota(+v.nota)}" data-w="${+v.nota * 10}%"></i></div><b style="color:${corNota(+v.nota)}">${fmt(+v.nota, 1)}</b></div>`).join('')}</div>` : ''}
   </div>`;
+}
+
+// ---------- Check diário (o que falta do check-in noturno) ----------
+// dias: 0=dom ... 6=sáb; sem "dias" = todo dia
+const CHECK = [
+  { k: 'produtividade', t: 'Produtividade', tipo: 'escala', min: 0, max: 10 },
+  { k: 'tipo_dia', t: 'Como foi o dia', tipo: 'multi', op: ['normal', 'tranquilo', 'feliz', 'produtivo', 'estressante', 'cansativo', 'preguiçoso', 'ansioso', 'triste'] },
+  { k: 'energia', t: 'Energia', tipo: 'escala', min: 1, max: 5 },
+  { k: 'dentes', t: 'Escovou os dentes', tipo: 'op', op: [[0, '0'], [1, '1x'], [2, '2x'], [3, '3x+']] },
+  { k: 'louca', t: 'Louça no fim do dia', tipo: 'op', op: [['nenhuma', 'Nenhuma'], ['pouca', 'Pouca'], ['muita', 'Muita']] },
+  { k: 'quarto_nota', t: 'Limpeza do quarto', tipo: 'escala', min: 0, max: 10 },
+  { k: 'projetos_nota', t: 'Projetos pessoais', tipo: 'escala', min: 0, max: 10 },
+  { k: 'fap', t: 'FAP', tipo: 'op', op: [[0, '0'], [1, '1'], [2, '2'], [3, '3+']] },
+  { k: 'jogo_pc_min', t: 'Jogo no PC', tipo: 'num', un: 'min', at: [0, 15, 30, 60, 90] },
+  { k: 'instagram_min', t: 'Instagram', tipo: 'num', un: 'min', at: [15, 30, 45, 60, 90, 120] },
+  { k: 'passos', t: 'Passos do dia', tipo: 'num', un: 'passos', at: [] },
+  { k: 'gasto_fora_plano', t: 'Gasto fora do plano', tipo: 'op', op: [[false, 'Não'], [true, 'Sim']] },
+  { k: 'davi_contato', t: 'Davi', tipo: 'op', op: [['jogamos', 'Jogamos'], ['ligacao', 'Ligação'], ['mensagem', 'Mensagem'], ['nenhum', 'Nenhum']] },
+  { k: 'fast_food', t: 'Fast food / delivery', tipo: 'op', op: [[false, 'Não'], [true, 'Sim']], dias: [5, 6, 0] },
+  { k: 'faxina_nota', t: 'Faxina geral', tipo: 'escala', min: 0, max: 10, dias: [6, 0] },
+  { k: 'planejou_semana', t: 'Planejou a semana', tipo: 'op', op: [[false, 'Não'], [true, 'Sim']], dias: [0] },
+  { k: 'destaque', t: 'Destaque do dia', tipo: 'texto', opcional: true },
+  { k: 'atrapalhou', t: 'O que atrapalhou', tipo: 'texto', opcional: true },
+];
+const SONO = { k: '_sono', t: 'Sono da noite' };
+S.edit = new Set(); S.multi = null;
+function checkDoDia(D) {
+  const wd = new Date(S.dia + 'T12:00:00Z').getUTCDay();
+  const itens = CHECK.filter(c => !c.dias || c.dias.includes(wd));
+  const di = D.diario || {};
+  const vazio = c => di[c.k] == null || (Array.isArray(di[c.k]) && !di[c.k].length);
+  const falta = itens.filter(c => vazio(c) || S.edit.has(c.k));
+  const feito = itens.filter(c => !vazio(c) && !S.edit.has(c.k));
+  const faltaSono = !D.sono || S.edit.has('_sono');
+  return { itens, falta, feito, faltaSono, di };
+}
+function pendentesCheck(D) { const c = checkDoDia(D); return c.falta.filter(x => !x.opcional).length + (c.faltaSono ? 1 : 0); }
+function valorTxt(c, v) {
+  if (c.tipo === 'multi') return v.join(', ');
+  if (c.tipo === 'op') { const o = c.op.find(o => o[0] === v); return o ? o[1] : String(v); }
+  if (c.tipo === 'num') return fmt(v) + ' ' + c.un;
+  return esc(v);
+}
+function controle(c, v) {
+  if (c.tipo === 'escala') {
+    let h = '';
+    for (let n = c.min; n <= c.max; n++) h += `<button class="opt ${v === n ? 'sel' : ''}" data-ck="${c.k}" data-v="${n}">${n}</button>`;
+    return `<div class="opts ${c.max - c.min > 5 ? 'esc' : ''}">${h}</div>`;
+  }
+  if (c.tipo === 'op') return `<div class="opts">${c.op.map(([val, lab]) => `<button class="opt ${v === val ? 'sel' : ''}" data-ck="${c.k}" data-v='${JSON.stringify(val)}'>${lab}</button>`).join('')}</div>`;
+  if (c.tipo === 'multi') {
+    const sel = S.multi || v || [];
+    return `<div class="opts">${c.op.map(o => `<button class="opt ${sel.includes(o) ? 'sel' : ''}" data-multi="${o}">${o}</button>`).join('')}</div>
+      <div class="inl"><input id="ckOutro" placeholder="outro (opcional)"><button class="btn small" data-savemulti="1">Salvar</button></div>`;
+  }
+  if (c.tipo === 'num') return `${c.at.length ? `<div class="opts">${c.at.map(n => `<button class="opt" data-ck="${c.k}" data-v="${n}">${n}</button>`).join('')}</div>` : ''}
+    <div class="inl"><input id="ck_${c.k}" inputmode="numeric" placeholder="${c.un}" value="${v ?? ''}"><button class="btn small" data-savenum="${c.k}">Salvar</button></div>`;
+  return `<div class="inl"><input id="ck_${c.k}" placeholder="uma frase" value="${esc(v ?? '')}"><button class="btn small" data-savetxt="${c.k}">Salvar</button></div>`;
+}
+function telaCheck(D) {
+  if (S.dia > hojeISO()) return `<div class="card"><p class="muted">Esse dia ainda não chegou.</p></div>`;
+  const C = checkDoDia(D);
+  const total = C.itens.filter(c => !c.opcional).length + 1;
+  const pend = pendentesCheck(D), ok = total - pend;
+  let html = `<div class="card"><div class="prog"><svg viewBox="0 0 64 64">${anel(32, 26, 8, ok / total, pend ? '#ff7a2f' : '#3cf28a')}</svg>
+    <div><div class="big num">${pend ? `Faltam ${pend}` : 'Tudo respondido 👊'}</div><div class="muted">${ok} de ${total} itens do check-in de ${rotuloData(S.dia).d.toLowerCase()}. O que você responder aqui o check-in das 22h27 não pergunta de novo.</div></div></div></div>`;
+  let q = '';
+  if (C.faltaSono) {
+    const s = D.sono || {};
+    q += `<div class="q"><div class="qt"><span>Sono da noite</span><small>horas e qualidade</small></div>
+      <div class="opts">${[5, 6, 6.5, 7, 7.5, 8].map(h => `<button class="opt ${S.sonoH === h ? 'sel' : ''}" data-sonoh="${h}">${fmt(h, 1)}h</button>`).join('')}</div>
+      <div class="inl"><input id="sonoH" inputmode="decimal" placeholder="horas (ex.: 6,5)" value="${S.sonoH ?? s.horas ?? ''}"></div>
+      <div class="muted" style="margin:10px 0 6px">Qualidade</div>
+      <div class="opts">${[1, 2, 3, 4, 5].map(n => `<button class="opt" data-sonoq="${n}">${n}</button>`).join('')}</div></div>`;
+  }
+  q += C.falta.map(c => `<div class="q"><div class="qt">${c.t}${c.opcional ? ' <small>opcional</small>' : ''}</div>${controle(c, C.di[c.k])}</div>`).join('');
+  if (q) html += `<div class="card"><h2><span class="t">${ic('list-checks')} Falta responder</span></h2>${q}</div>`;
+  const feitos = (D.sono && !S.edit.has('_sono') ? [`<div class="done" data-edit="_sono"><span>Sono</span><span class="v">${fmt(D.sono.horas, 1)} h · ${D.sono.qualidade ?? '—'}/5</span></div>`] : [])
+    .concat(C.feito.map(c => `<div class="done" data-edit="${c.k}"><span>${c.t}</span><span class="v">${valorTxt(c, C.di[c.k])}</span></div>`));
+  if (feitos.length) html += `<div class="card"><h2><span class="t">${ic('circle-check')} Respondido</span><small>toque pra mudar</small></h2>${feitos.join('')}</div>`;
+  return html;
+}
+async function salvarCheck(campo, valor) {
+  vibrar();
+  const { error } = await sb.from('diario').upsert({ data: S.dia, [campo]: valor }, { onConflict: 'data' });
+  if (error) return erro(error);
+  S.edit.delete(campo); S.multi = null;
+  try { await sb.rpc('calcular_nota_dia', { p_data: S.dia }); } catch (e) {}
+  toast('✓ Salvo');
+  render();
+}
+async function salvarSono(qual) {
+  const h = parseFloat(String($('sonoH').value || S.sonoH || '').replace(',', '.'));
+  if (!(h > 0)) { toast('Escolha as horas primeiro'); return; }
+  vibrar();
+  const { data: ex } = await sb.from('sono').select('id').eq('data', S.dia).maybeSingle();
+  const r = ex ? await sb.from('sono').update({ horas: h, qualidade: qual }).eq('id', ex.id)
+    : await sb.from('sono').insert({ data: S.dia, horas: h, qualidade: qual, observacoes: 'registrado pelo app' });
+  if (r.error) return erro(r.error);
+  S.sonoH = null; S.edit.delete('_sono');
+  try { await sb.rpc('calcular_nota_dia', { p_data: S.dia }); } catch (e) {}
+  toast(`✓ Sono: ${fmt(h, 1)} h, qualidade ${qual}`);
+  render();
 }
 
 // ---------- Nutrição ----------
@@ -691,6 +816,28 @@ function ligarEventos(D) {
     toast('✓ Tarefa concluída', () => sb.from('notas').update({ concluido: false }).eq('id', id));
     setTimeout(render, 350);
   });
+  view.querySelectorAll('[data-ck]').forEach(b => b.onclick = () => salvarCheck(b.dataset.ck, JSON.parse(b.dataset.v)));
+  view.querySelectorAll('[data-multi]').forEach(b => b.onclick = () => {
+    const c = CHECK.find(x => x.k === 'tipo_dia'); S.multi = S.multi || [...((D.diario || {}).tipo_dia || [])];
+    const o = b.dataset.multi; S.multi = S.multi.includes(o) ? S.multi.filter(x => x !== o) : [...S.multi, o];
+    b.classList.toggle('sel'); vibrar();
+  });
+  view.querySelectorAll('[data-savemulti]').forEach(b => b.onclick = () => {
+    const outro = ($('ckOutro').value || '').trim().toLowerCase();
+    const v = [...(S.multi || (D.diario || {}).tipo_dia || [])]; if (outro) v.push(outro);
+    if (!v.length) return toast('Escolha pelo menos um');
+    salvarCheck('tipo_dia', v);
+  });
+  view.querySelectorAll('[data-savenum]').forEach(b => b.onclick = () => {
+    const v = parseInt(($('ck_' + b.dataset.savenum).value || '').replace(/\D/g, ''), 10);
+    if (isNaN(v)) return toast('Digite um número'); salvarCheck(b.dataset.savenum, v);
+  });
+  view.querySelectorAll('[data-savetxt]').forEach(b => b.onclick = () => {
+    const v = ($('ck_' + b.dataset.savetxt).value || '').trim(); if (v) salvarCheck(b.dataset.savetxt, v);
+  });
+  view.querySelectorAll('[data-sonoh]').forEach(b => b.onclick = () => { S.sonoH = +b.dataset.sonoh; $('sonoH').value = fmt(S.sonoH, 1); view.querySelectorAll('[data-sonoh]').forEach(x => x.classList.toggle('sel', x === b)); vibrar(); });
+  view.querySelectorAll('[data-sonoq]').forEach(b => b.onclick = () => salvarSono(+b.dataset.sonoq));
+  view.querySelectorAll('[data-edit]').forEach(el => el.onclick = () => { S.edit.add(el.dataset.edit); render(); });
   const linhas = S.tab === 'remedios' ? statusRemedios(D) : [];
   view.querySelectorAll('[data-tomar]').forEach(b => b.onclick = () => registrarDose(linhas[b.dataset.tomar], 'tomado'));
   view.querySelectorAll('[data-pular]').forEach(b => b.onclick = () => registrarDose(linhas[b.dataset.pular], 'pulado'));
