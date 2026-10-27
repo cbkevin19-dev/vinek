@@ -195,29 +195,54 @@ main{padding:6px 16px calc(100px + env(safe-area-inset-bottom));max-width:640px;
 #fab svg.i{width:26px;height:26px}
 #fab:active{transform:scale(.92)}
 body.compr #fab{bottom:calc(156px + env(safe-area-inset-bottom))}
-#chat{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;max-width:640px;margin:0 auto}
-#chat .chh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
-#chat .chh small{display:block;color:var(--muted);font-size:11px;font-weight:600}
-#chLog{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
-.bl{max-width:86%;padding:10px 13px;border-radius:18px;font-size:14px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word}
-.bl.eu{align-self:flex-end;background:var(--kcal);color:#04140b;border-bottom-right-radius:6px;font-weight:600}
-.bl.ai{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:6px}
-.bl.ai.err{border-color:var(--bad)}
-.bl img{display:block;max-width:180px;border-radius:12px;margin-bottom:6px}
-.bl .ac{margin-top:6px;display:flex;flex-direction:column;gap:3px}
-.bl .ac span{font-size:12px;font-weight:700;background:#3cf28a1a;color:var(--kcal);border-radius:8px;padding:3px 8px}
+#chat{position:fixed;inset:0;z-index:30;background:rgba(3,5,8,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
+.chbox{position:relative;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;
+  background:radial-gradient(600px 300px at 85% -60px,#1fb8ff22,transparent 70%),radial-gradient(500px 280px at 0% 0%,#3cf28a1c,transparent 70%),var(--bg);animation:up .22s ease-out}
+@media (min-width:700px){.chbox{width:520px;height:min(760px,88vh);border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px #000c,0 0 0 1px #3cf28a14}}
+.chh{display:flex;align-items:center;gap:12px;padding:16px 16px 12px}
+.chav{width:42px;height:42px;border-radius:14px;flex:none;display:grid;place-items:center;color:#04140b;background:linear-gradient(145deg,var(--kcal),#1fb8ff);box-shadow:0 6px 18px #3cf28a40}
+.chav svg.i{width:22px;height:22px}
+.chh .grow{flex:1;min-width:0}
+.chh .grow b{font-size:17px;font-weight:900;letter-spacing:-.02em}
+.chh .grow small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:600}
+.chh .grow small i{width:7px;height:7px;border-radius:50%;background:var(--kcal);box-shadow:0 0 8px var(--kcal)}
+.chib{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:grid;place-items:center}
+.chib svg.i{width:18px;height:18px}
+.chib:active{transform:scale(.92)}
+#chLog{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:#1d242e transparent}
+.chvz{margin:auto 0;padding:8px 0;text-align:center}
+.chvz .chav{width:64px;height:64px;border-radius:22px;margin:0 auto 14px}
+.chvz .chav svg.i{width:30px;height:30px}
+.chvz h3{margin:0;font-size:24px;font-weight:900;letter-spacing:-.03em}
+.chvz p{margin:6px auto 18px;max-width:320px;color:var(--muted);font-size:14px;line-height:1.4}
+.chg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;text-align:left}
+.chg button{min-width:0;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px;color:var(--ink);display:flex;gap:10px;align-items:center;font-size:13px;font-weight:700;line-height:1.2}
+.chg button:active{transform:scale(.96)}
+.chg button span{width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c)}
+.chg button span svg.i{width:18px;height:18px}
+.chg button div{min-width:0;text-align:left}
+.chg button em{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal;font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
+.bl{max-width:84%;padding:10px 14px;border-radius:20px;font-size:14.5px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;animation:up .18s ease-out}
+.bl.eu{align-self:flex-end;background:linear-gradient(145deg,var(--kcal),#2ad6a0);color:#04140b;border-bottom-right-radius:6px;font-weight:600}
+.bl.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
+.bl.ai.err{border-color:#ff4d5e66;background:#ff4d5e12}
+.bl img{display:block;max-width:200px;border-radius:14px;margin-bottom:6px}
+.bl .ac{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.bl .ac span{font-size:12.5px;font-weight:700;background:#3cf28a14;border:1px solid #3cf28a33;color:var(--kcal);border-radius:10px;padding:5px 9px}
 .bl .tr{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:4px}
-.bl.pens{color:var(--muted)}
-.chsug{display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px}
-.chsug button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:6px 11px;font-size:12px;font-weight:600}
-.chin{display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
-.chin textarea{flex:1;resize:none;min-height:42px;max-height:120px;border-radius:20px;padding:10px 14px;font:inherit;font-size:15px;background:var(--card2);color:var(--ink);border:1px solid var(--line)}
-.chin .cb{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--card2);color:var(--ink);display:grid;place-items:center}
+.bl.pens{color:var(--muted);display:flex;gap:8px;align-items:center}
+.bl.pens:before{content:'';width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--kcal);animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.chin{margin:0 12px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:6px;padding:6px;border-radius:26px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px #0008}
+.chin:focus-within{border-color:#3cf28a66}
+.chin textarea{flex:1;resize:none;min-height:40px;max-height:120px;border:0;outline:0;background:transparent;color:var(--ink);padding:10px 4px;font:inherit;font-size:15px}
+.chin .cb{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:var(--card2);color:var(--muted);display:grid;place-items:center}
+.chin .cb svg.i{width:19px;height:19px}
 .chin .cb.send{background:var(--kcal);color:#04140b}
 .chin .cb.rec{background:var(--bad);color:#fff;animation:pulso 1s infinite}
 @keyframes pulso{50%{box-shadow:0 0 0 8px #ff4d5e33}}
-#chFoto{display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:12px;color:var(--muted)}
-#chFoto img{height:44px;border-radius:8px}
+#chFoto{display:flex;align-items:center;gap:10px;margin:0 12px 8px;padding:8px;border-radius:16px;background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+#chFoto img{height:48px;width:48px;object-fit:cover;border-radius:10px}
 
 
 /* navegação */
@@ -335,18 +360,18 @@ input:focus,select:focus{outline:2px solid #3cf28a66;border-color:transparent}
 <div id="sheet" class="hidden"><div class="sh"><div class="shh"><b id="shTitle">Repetir refeição</b><button class="x" id="shClose">✕</button></div><div id="shBody"></div></div></div>
 <div id="timer" class="hidden"><div><div id="tmL" class="muted">descanso</div><div id="tmV" class="num">0:00</div></div><div style="display:flex;gap:6px"><button class="btn small ghost" id="tmMais">+15s</button><button class="btn small" id="tmStop">Parar</button></div></div>
 <button id="fab" class="hidden" aria-label="Registrar pelo chat"></button>
-<div id="chat" class="hidden">
-  <div class="chh"><div><b>Registrar</b><small>texto, áudio ou foto · só registra</small></div><div style="display:flex;gap:6px;align-items:center"><button class="btn small ghost" id="chLimpa">Limpar</button><button class="x" id="chX">✕</button></div></div>
+<div id="chat" class="hidden"><div class="chbox">
+  <div class="chh"><div class="chav" id="chAv"></div><div class="grow"><b>Registro rápido</b><small><i></i>texto, áudio ou foto</small></div>
+    <button class="chib" id="chLimpa" aria-label="Limpar conversa" title="Limpar conversa"></button><button class="chib" id="chX" aria-label="Fechar"></button></div>
   <div id="chLog"></div>
-  <div class="chsug" id="chSug"></div>
   <div id="chFoto" class="hidden"></div>
   <div class="chin">
     <button class="cb" id="chCam" aria-label="Foto"></button>
     <input type="file" id="chFile" accept="image/*" capture="environment" class="hidden">
-    <textarea id="chTxt" rows="1" placeholder="Comi, bebi, gastei..."></textarea>
+    <textarea id="chTxt" rows="1" placeholder="Comeu, bebeu, gastou?"></textarea>
     <button class="cb" id="chMic" aria-label="Gravar áudio"></button>
   </div>
-</div>
+</div></div>
 <div id="toast" class="hidden"><span id="tMsg"></span><button id="tUndo">Desfazer</button></div>
 
 <script src="/supabase.js"></script>
@@ -1930,28 +1955,37 @@ Object.assign(ICONS, {
   camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" />',
   send: '<path d="m22 2-7 20-4-9-9-4Z" /> <path d="M22 2 11 13" />',
   square: '<rect width="14" height="14" x="5" y="5" rx="2" />',
+  'trash-2': '<path d="M3 6h18" /> <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /> <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />',
 });
 const CH = { msgs: [], foto: null, rec: null, pedacos: [], enviando: false };
 try { CH.msgs = JSON.parse(localStorage.getItem('vinek-chat') || '[]'); } catch (e) {}
 const salvarChat = () => { try { localStorage.setItem('vinek-chat', JSON.stringify(CH.msgs.slice(-40).map(m => ({ ...m, img: null })))); } catch (e) {} };
-$('fab').innerHTML = ic('message-circle'); $('chCam').innerHTML = ic('camera');
+$('fab').innerHTML = ic('message-circle'); $('chCam').innerHTML = ic('camera'); $('chAv').innerHTML = ic('sparkles');
+$('chLimpa').innerHTML = ic('trash-2'); $('chX').innerHTML = ic('x');
+$('chat').onclick = e => { if (e.target.id === 'chat') $('chX').onclick(); };
 $('fab').onclick = abrirChat;
 $('chX').onclick = () => { $('chat').classList.add('hidden'); if (location.hash === '#chat') history.replaceState(null, '', '#' + S.tab); };
 $('chCam').onclick = () => $('chFile').click();
 $('chLimpa').onclick = () => { if (CH.enviando) return; CH.msgs = []; salvarChat(); desenharChat(); };
-const SUG = ['Bebi a garrafa azul', 'Comi 2 rosquinhas', 'Gastei R$ 25 no mercado', 'Pesei 89,2 kg', 'Me lembra de pagar o advogado dia 20'];
+const SUG = [
+  ['droplet', 'var(--agua)', 'Água', 'Bebi a garrafa azul'],
+  ['donut', 'var(--prot)', 'Beliscar', 'Comi 2 rosquinhas'],
+  ['utensils', 'var(--kcal)', 'Refeição', 'Almocei 150 g de arroz pronto e 120 g de frango'],
+  ['wallet', 'var(--carb)', 'Gasto', 'Gastei R$ 25 no mercado'],
+  ['camera', 'var(--gord)', 'Notinha', ''],
+  ['list-checks', '#1fb8ff', 'Tarefa', 'Me lembra de pagar o advogado dia 20'],
+];
 function abrirChat() {
   vibrar(); $('chat').classList.remove('hidden'); desenharChat();
-  $('chSug').innerHTML = SUG.map(t => `<button>${esc(t)}</button>`).join('');
-  $('chSug').querySelectorAll('button').forEach(b => b.onclick = () => { $('chTxt').value = b.textContent; botaoChat(); $('chTxt').focus(); });
-  setTimeout(() => $('chTxt').focus(), 50);
+  if (matchMedia('(min-width:700px)').matches) setTimeout(() => $('chTxt').focus(), 50);
 }
 function desenharChat() {
   const L = $('chLog');
-  L.innerHTML = (CH.msgs.length ? '' : `<div class="bl ai">Me fala o que comeu, bebeu, gastou, pesou ou o que precisa lembrar. Pode mandar áudio ou foto da notinha do mercado. Eu só registro, não mexo no app.</div>`) +
-    CH.msgs.map(m => `<div class="bl ${m.role === 'user' ? 'eu' : 'ai'}${m.erro ? ' err' : ''}${m.pens ? ' pens' : ''}">${m.img ? `<img src="${m.img}">` : ''}${m.tr ? `<div class="tr">🎤 ${esc(m.tr)}</div>` : ''}${esc(m.content)}${m.acoes?.length ? `<div class="ac">${m.acoes.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : ''}</div>`).join('');
+  L.innerHTML = CH.msgs.length ? CH.msgs.map(m => `<div class="bl ${m.role === 'user' ? 'eu' : 'ai'}${m.erro ? ' err' : ''}${m.pens ? ' pens' : ''}">${m.img ? `<img src="${m.img}">` : ''}${m.tr ? `<div class="tr">🎤 ${esc(m.tr)}</div>` : ''}${esc(m.content)}${m.acoes?.length ? `<div class="ac">${m.acoes.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : ''}</div>`).join('')
+    : `<div class="chvz"><div class="chav">${ic('sparkles')}</div><h3>O que rolou?</h3><p>Escreva, mande um áudio ou a foto da notinha. Eu calculo e registro tudo sozinho.</p>
+      <div class="chg">${SUG.map(([i, c, t, ex], n) => `<button data-sug="${n}" style="--c:${c}"><span>${ic(i)}</span><div>${t}<em>${ex ? esc(ex) : 'Foto do cupom'}</em></div></button>`).join('')}</div></div>`;
+  L.querySelectorAll('[data-sug]').forEach(b => b.onclick = () => { const ex = SUG[+b.dataset.sug][3]; if (!ex) return $('chFile').click(); $('chTxt').value = ex; $('chTxt').oninput(); $('chTxt').focus(); });
   L.scrollTop = L.scrollHeight;
-  $('chSug').classList.toggle('hidden', CH.msgs.length > 0);
 }
 function botaoChat() {
   const temTexto = $('chTxt').value.trim() || CH.foto;
