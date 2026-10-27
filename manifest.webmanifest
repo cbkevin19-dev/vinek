@@ -21,6 +21,17 @@
   ],
   "shortcuts": [
     {
+      "name": "Chat de registro",
+      "short_name": "Chat",
+      "url": "/#chat",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Registrar",
       "short_name": "Registrar",
       "url": "/#registros",
