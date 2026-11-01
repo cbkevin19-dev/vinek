@@ -464,15 +464,17 @@ async function iniciar() {
   $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('fab').classList.remove('hidden');
   if (iniciado) return; iniciado = true;
   if (location.hash === '#chat') setTimeout(abrirChat, 300);
-  const [m, f, r, rm] = await Promise.all([
+  const [m, f, r, rm, mh] = await Promise.all([
     sb.from('metas').select('chave,valor'),
     sb.from('refeicoes_favoritas').select('*').order('id'),
     sb.from('recipientes').select('*').order('id'),
     sb.from('remedios').select('*').eq('ativo', true).order('id'),
+    sb.from('metas_historico').select('*').is('visto_em', null).order('id', { ascending: false }).limit(1),
   ]);
   if (m.error) { erro(m.error); return; }
   (m.data || []).forEach(x => S.metas[x.chave] = x.valor);
   S.fav = f.data || []; S.rec = r.data || []; S.rem = rm.data || [];
+  S.metasNovas = (mh && mh.data && mh.data[0]) || null;
   if ('serviceWorker' in navigator && 'PushManager' in window) await checarPush();
   render();
 }
@@ -610,6 +612,23 @@ function chipStatus(log) {
   return `<span class="chip ${log.status === 'tomado' ? 'ok' : 'warn'}">${log.status}</span>`;
 }
 
+// metas novas da semana (recalculadas pelo peso oficial de terça)
+function cardMetasNovas() {
+  const N = S.metasNovas;
+  if (!N || S.dia !== hojeISO()) return '';
+  const linha = (nome, cor, novo, ant, un) => {
+    const d = ant == null ? null : Math.round(novo - ant);
+    const dif = d == null || d === 0 ? '<span class="muted">igual</span>' : `<span class="muted">${d > 0 ? '+' : ''}${fmt(d)} ${un}</span>`;
+    return `<div class="stat"><div class="k">${nome}</div><div class="v num" style="color:${cor}">${fmt(novo)}${un === 'kcal' ? '' : ' ' + un}</div>${ant == null ? '' : `<div class="muted">antes ${fmt(ant)} · ${dif}</div>`}</div>`;
+  };
+  const dp = N.peso_ant != null ? ` (${N.peso_kg - N.peso_ant > 0 ? '+' : ''}${fmt(N.peso_kg - N.peso_ant, 1)} kg)` : '';
+  return `<div class="card" style="border-color:var(--kcal)"><h2><span class="t">${ic('target')} Metas novas da semana</span><small>peso ${fmt(N.peso_kg, 1)} kg${dp}</small></h2>
+    <p class="muted" style="margin:0">Recalculadas pelo peso oficial de ${N.data_peso.slice(8, 10)}/${N.data_peso.slice(5, 7)}: gasto do dia − 20%.</p>
+    <div class="stats">${linha('Kcal (máximo)', 'var(--kcal)', N.kcal, N.kcal_ant, 'kcal')}${linha('Proteína (mínimo)', 'var(--prot)', N.proteina, N.proteina_ant, 'g')}
+    ${linha('Carbo (máximo)', 'var(--carb)', N.carbo, N.carbo_ant, 'g')}${linha('Gordura (máximo)', 'var(--gord)', N.gordura, N.gordura_ant, 'g')}</div>
+    <button class="btn" data-metasok="${N.id}" style="margin-top:12px;width:100%">Entendi</button></div>`;
+}
+
 function telaInicio(D) {
   const t = somaMacros(D.ref), M = metasMacro();
   const agua = totalAgua(D), mAgua = metaAgua(S.dia);
@@ -619,7 +638,7 @@ function telaInicio(D) {
   const rem = statusRemedios(D);
   const pend = D.notas.filter(n => !n.prazo || n.prazo.slice(0, 10) <= S.dia);
   const kcalCor = t.kcal > M.kcal ? 'var(--bad)' : 'var(--kcal)';
-  let html = painel(D) + cardNota(D) + cardSeq(D);
+  let html = cardMetasNovas() + painel(D) + cardNota(D) + cardSeq(D);
 
   // tarefas
   const nT = pend.length + D.casa.length;
@@ -1873,6 +1892,12 @@ function ligarEventos(D) {
   });
   view.querySelectorAll('[data-delagua]').forEach(b => b.onclick = async () => {
     const { error } = await sb.from('agua_log').delete().eq('id', b.dataset.delagua); error ? erro(error) : render();
+  });
+  view.querySelectorAll('[data-metasok]').forEach(b => b.onclick = async () => {
+    vibrar();
+    const { error } = await sb.from('metas_historico').update({ visto_em: new Date().toISOString() }).eq('id', b.dataset.metasok);
+    if (error) return erro(error);
+    S.metasNovas = null; render();
   });
   view.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => {
     vibrar(); b.style.borderColor = 'var(--kcal)'; b.style.color = 'var(--kcal)';
