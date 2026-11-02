@@ -1,5 +1,5 @@
 // Cache só do "casco" do app; dados vêm sempre do banco.
-const CACHE = 'vinek-v10';
+const CACHE = 'vinek-v11';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/supabase.js'];
 
 self.addEventListener('install', e => {
@@ -37,7 +37,8 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const t = (e.notification.data && e.notification.data.tag) || '';
-  const aba = t.startsWith('rem_') ? 'remedios' : t.startsWith('agua') ? 'nutricao' : t === 'check' ? 'check' : 'inicio';
+  const aba = t === 'check' || t.startsWith('checkin') ? 'checkin' : t.startsWith('treino') || t.startsWith('bike') ? 'treino'
+    : t.startsWith('despensa') ? 'despensa' : t.startsWith('conta') ? 'financas' : t ? 'registrar' : 'hoje';
   const url = '/#' + aba;
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
     for (const c of cs) { if ('focus' in c) { c.navigate(url); return c.focus(); } }
