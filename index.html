@@ -51,6 +51,8 @@ main{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 16px)
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{min-height:38px;padding:9px 13px;border-radius:19px;font-size:13px;background:var(--card2);color:var(--soft);border:1px solid var(--line)}
 .chip.on{background:color-mix(in srgb,var(--c,var(--agua)) 14%,var(--card2));color:var(--c,var(--agua));border-color:var(--c,var(--agua))}
+#bEsf{flex-wrap:nowrap;gap:4px}
+#bEsf .chip{flex:1;min-width:0;padding:9px 0;text-align:center}
 .btn{min-height:48px;border-radius:14px;background:var(--kcal);color:#0B0F14;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;padding:0 16px;width:100%}
 .btn.c{background:var(--agua)} .btn.p{background:var(--gord)}
 .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
@@ -876,8 +878,12 @@ ROTAS.treino = async () => {
   const bM = metaNum('bike_min_dia', 40);
   h += `<div class="card ${D.bike >= bM ? 'hlg' : ''}">${sec('Bike', fmt(D.bike) + ' / ' + bM + ' min')}${bar(D.bike, bM, 'var(--lime)')}
     ${dow(iso) === 6 ? `<div class="aviso" style="border-color:var(--lime);background:#1A2410"><span class="num" style="color:var(--lime)">${semanaIntervalado(iso)}</span><span>tiros de intervalado: 5 min leve, depois ${semanaIntervalado(iso)} × (30 s forte esforço 8 + 90 s leve), 5 min leve no fim.</span></div>` : ''}
-    <div style="display:flex;gap:8px"><input class="inp" id="bMin" inputmode="numeric" placeholder="minutos" style="flex:1"><button class="btn small" data-a="salvarBike" style="min-height:48px">Salvar bike</button></div>
-    <div class="chips">${[15, 20, 30, 40].map(m => chip('bikeRap', `data-m="${m}"`, m + ' min', false, 'var(--lime)')).join('')}</div></div>`;
+    ${D.cardio.filter(c => c.modalidade === 'bike').map(c => `<span class="small muted">${ic('bike')} ${minSeg(c.minutos)}${c.km ? ' · ' + fmt(c.km, 2) + ' km' : ''}${c.velocidade_kmh ? ' · ' + fmt(c.velocidade_kmh, 1) + ' km/h' : ''}${c.esforco ? ' · esforço ' + c.esforco : ''}</span>`).join('')}
+    <div style="display:flex;gap:8px"><input class="inp" id="bMin" inputmode="decimal" placeholder="tempo (min:seg)" style="flex:1"><input class="inp" id="bKm" inputmode="decimal" placeholder="km" style="flex:1"></div>
+    <div class="chips">${[15, 20, 30, 40].map(m => chip('bikeRap', `data-m="${m}"`, m + ' min', false, 'var(--lime)')).join('')}</div>
+    <span class="small muted">Esforço (1 a 10)</span>
+    <div class="chips" id="bEsf">${Array.from({ length: 10 }, (_, k) => k + 1).map(n => chip('bikeEsf', `data-n="${n}"`, n, n === (S.bikeEsf || (dow(iso) === 6 ? 8 : 6)), 'var(--lime)')).join('')}</div>
+    <button class="btn small" data-a="salvarBike" style="min-height:48px">Salvar bike</button></div>`;
   if (!P.itens.length) {
     h += `<div class="card"><div class="empty">${P.modelo ? 'Modelo sem exercícios ainda.' : 'Sem treino marcado neste dia (descanso).'}</div>
       ${P.modelo ? `<button class="btn ghost" data-go="modelo/${P.modelo.id}">${ic('pencil')} Montar o ${esc(P.modelo.nome)}</button>` : ''}</div>`;
@@ -906,14 +912,33 @@ ROTAS.treino = async () => {
     <div class="chips">${S.mod.map(m => chip('', `data-go="modelo/${m.id}"`, 'Editar ' + esc(m.letra || m.nome), false, 'var(--prot)')).join('')}</div>`;
   return h;
 };
+// "43:24", "43m24", "43 24" ou "43,4" -> minutos decimais
+function lerTempo(v) {
+  v = String(v || '').trim().toLowerCase();
+  const m = v.match(/^(\d+)\s*(?::|m|min|\s)\s*(\d{1,2})\s*s?$/);
+  if (m) return +m[1] + (+m[2]) / 60;
+  return num(v.replace(/min|m$/, ''));
+}
+function minSeg(min) { const t = Math.round((+min || 0) * 60); return Math.floor(t / 60) + 'min' + String(t % 60).padStart(2, '0') + 's'; }
 A.bikeRap = el => { $('bMin').value = el.dataset.m; };
+A.bikeEsf = el => { S.bikeEsf = +el.dataset.n; document.querySelectorAll('#bEsf .chip').forEach(c => c.classList.toggle('on', c === el)); };
 A.salvarBike = async () => {
-  const min = num($('bMin').value); if (!(min > 0)) return toast('Informe os minutos');
-  vibrar();
+  const min = lerTempo($('bMin').value); if (!(min > 0)) return toast('Informe o tempo (ex.: 43:24)');
+  const km = num(String($('bKm').value || '').replace(',', '.'));
   const sab = dow(S.dia) === 6;
-  const { data, error } = await sb.from('cardio').insert({ data: S.dia, modalidade: 'bike', minutos: min, esforco: sab ? 8 : 6, local: 'casa', observacoes: sab ? 'intervalado ' + semanaIntervalado(S.dia) + ' tiros (app)' : 'registrado pelo app' }).select('id').single();
+  const esf = S.bikeEsf || (sab ? 8 : 6);
+  const row = { data: S.dia, modalidade: 'bike', minutos: Math.round(min * 100) / 100, esforco: esf, local: 'casa', observacoes: sab ? 'intervalado ' + semanaIntervalado(S.dia) + ' tiros (app)' : 'registrado pelo app' };
+  if (km > 0) {
+    row.km = km;
+    row.velocidade_kmh = Math.round(km / (min / 60) * 100) / 100;
+    row.ritmo_min_km = Math.round(min / km * 100) / 100;
+    if (row.velocidade_kmh > 45) return toast(`Velocidade ${fmt(row.velocidade_kmh, 1)} km/h? Confira tempo e km`);
+  }
+  vibrar();
+  const { data, error } = await sb.from('cardio').insert(row).select('id').single();
   if (error) return erro(error);
-  toast(`✓ Bike ${fmt(min)} min`, () => sb.from('cardio').delete().eq('id', data.id)); render();
+  S.bikeEsf = null;
+  toast(`✓ Bike ${minSeg(min)}${km > 0 ? ' · ' + fmt(km, 2) + ' km' : ''} · esforço ${esf}`, () => sb.from('cardio').delete().eq('id', data.id)); render();
 };
 function serieInfo(el) {
   const i = S.itens.find(z => z.id === +el.dataset.i), n = +el.dataset.n;
