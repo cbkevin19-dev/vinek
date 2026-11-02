@@ -784,7 +784,9 @@ ROTAS.financas = async () => {
   const bad = q.find(x => x.error); if (bad) throw bad.error;
   const [orc, tx, fixas, saldos] = q.map(x => x.data || []);
   const desp = tx.filter(t => t.natureza === 'despesa');
-  const itens = orc.map(o => ({ ...o, gasto: desp.filter(t => casaOrc(o, t)).reduce((s, t) => s - +t.valor, 0) }));
+  // subcategoria que tem teto próprio (ex.: FAST FOOD) não conta também no teto geral da categoria (ex.: Mercado)
+  const subsProprias = new Set(orc.filter(o => o.subcategoria).map(o => o.subcategoria.toUpperCase()));
+  const itens = orc.map(o => ({ ...o, gasto: desp.filter(t => casaOrc(o, t) && (o.subcategoria || !subsProprias.has((t.subcategoria || '').toUpperCase()))).reduce((s, t) => s - +t.valor, 0) }));
   const livre = metaNum('orcamento_livre_mes', 992);
   const usado = itens.filter(o => o.fonte !== 'flash').reduce((s, o) => s + o.gasto, 0);
   const resta = livre - usado;
