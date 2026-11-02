@@ -3,8 +3,8 @@
   "short_name": "VINEK",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#06080b",
-  "theme_color": "#06080b",
+  "background_color": "#0B0F14",
+  "theme_color": "#0B0F14",
   "lang": "pt-BR",
   "icons": [
     {
