@@ -444,8 +444,11 @@ async function carregarDia(iso) {
   const M = {}; (marcas || []).forEach(m => M[m.chave] = +m.valor);
   const plano = planoDoDia(semana && semana.data ? semana : null);
   const feitas = (series || []).filter(s => s.reps_feitas != null || s.tempo_s != null).length;
+  // treinos registrados pela conversa (tabela treinos) também contam como feitos
+  const conv = (treinos || []).reduce((s, t) => s + (Array.isArray(t.exercicios) ? t.exercicios.reduce((a, e) => a + (+e.series || 1), 0) : 0), 0);
+  const fT = feitas + conv, tT = plano.total || conv;
   return { iso, ref, agua, remlog, cardio, diario: diario && diario.data ? diario : null, disc: disc || [], marcas: M, series: series || [], semana: semana && semana.data ? semana : null,
-    peso, pressao, medidas, sono: sono && sono.data ? sono : null, treinos, t, ml, bike, tomados, plano, feitas };
+    peso, pressao, medidas, sono: sono && sono.data ? sono : null, treinos, t, ml, bike, tomados, plano, feitas, conv, fT, tT };
 }
 function planoDoDia(sem) {
   if (!sem) return { modelo: null, itens: [], total: 0 };
@@ -520,7 +523,7 @@ function agenda(D) {
     add('12:30', 'Almoço', '', temRef(['almoco']), 'var(--prot)');
     add('12:40', 'Vitaminas', 'vitamina C + polivitamínico', vit, 'var(--gord)');
     add('15:00', 'Garrafa do serviço', '2ª garrafa', nRec(1) >= 2, 'var(--agua)');
-    add('17:55', 'Treino' + (D.plano.core ? ' + core' : ''), D.plano.modelo ? D.plano.modelo.nome : 'sem treino marcado', D.plano.total ? D.feitas >= D.plano.total : null, 'var(--prot)');
+    add('17:55', 'Treino' + (D.plano.core ? ' + core' : ''), D.plano.modelo ? D.plano.modelo.nome : 'sem treino marcado', D.tT ? D.fT >= D.tT : null, 'var(--prot)');
     add('18:00', 'Café/janta', 'bater a proteína', temRef(['jantar', 'lanche']), 'var(--prot)');
     add('19:30', 'Garrafinha verde', '500 ml', nRec(4) > 0, 'var(--agua)');
   } else {
@@ -528,7 +531,7 @@ function agenda(D) {
     add('09:00', 'Minoxidil + garrafinha cinza', '', nRec(3) > 0 && D.tomados.has(1), 'var(--agua)');
     ['10:00', '12:30', '15:00', '17:30'].forEach((h, i) => add(h, 'Água', `${i + 1}ª garrafa do dia`, D.agua.length > i + 1, 'var(--agua)'));
     add('12:40', 'Vitaminas', 'vitamina C + polivitamínico', vit, 'var(--gord)');
-    if (D.plano.total) add('17:00', 'Treino' + (D.plano.core ? ' + core' : ''), D.plano.modelo ? D.plano.modelo.nome : 'core', D.feitas >= D.plano.total, 'var(--prot)');
+    if (D.tT) add('17:00', 'Treino' + (D.plano.core ? ' + core' : ''), D.plano.modelo ? D.plano.modelo.nome : D.conv ? 'registrado na conversa' : 'core', D.fT >= D.tT, 'var(--prot)');
     if (d === 0) add('17:00', 'Despensa', 'inventário de domingo', null, 'var(--carb)');
   }
   add('22:27', 'Check-in', 'fechar o dia', !!(D.diario && D.diario.energia != null), 'var(--gord)');
@@ -564,7 +567,7 @@ ROTAS.hoje = async () => {
     ${ind('Proteína', fmt(D.t.p), 'g / ' + fmt(pM), [D.t.p, pM], 'var(--prot)', D.t.p >= pM ? 'batida' : 'faltam ' + fmt(pM - D.t.p) + ' g')}
     ${ind('Água', fmt(D.ml), 'ml / ' + fmt(aM), [D.ml, aM], 'var(--agua)', D.ml >= aM ? 'batida' : 'faltam ' + fmt(aM - D.ml) + ' ml')}
     ${ind('Bike', fmt(D.bike), 'min / ' + fmt(bM), [D.bike, bM], 'var(--lime)', dow(iso) === 0 && !D.bike ? 'domingo é livre' : D.bike >= bM ? 'feito' : '')}
-    ${ind('Treino', fmt(D.feitas), 'séries / ' + fmt(D.plano.total), [D.feitas, D.plano.total || 1], 'var(--prot)', D.plano.modelo ? esc(D.plano.modelo.nome) + (D.plano.core ? ' + core' : '') : D.plano.core ? 'core' : 'descanso')}
+    ${ind('Treino', fmt(D.fT), 'séries / ' + fmt(D.tT), [D.fT, D.tT || 1], 'var(--prot)', D.plano.modelo ? esc(D.plano.modelo.nome) + (D.plano.core ? ' + core' : '') : D.plano.core ? 'core' : 'descanso')}
     ${ind('Suplementos', sup, '/ ' + S.rem.length, [sup, S.rem.length || 1], 'var(--gord)', sup >= S.rem.length ? 'todos tomados' : '')}
   </div>
   <div class="card">${sec('Carbo e gordura')}
@@ -878,8 +881,11 @@ ROTAS.treino = async () => {
     ${dow(iso) === 6 ? `<div class="aviso" style="border-color:var(--lime);background:#1A2410"><span class="num" style="color:var(--lime)">${semanaIntervalado(iso)}</span><span>tiros de intervalado: 5 min leve, depois ${semanaIntervalado(iso)} × (30 s forte esforço 8 + 90 s leve), 5 min leve no fim.</span></div>` : ''}
     <div style="display:flex;gap:8px"><input class="inp" id="bMin" inputmode="numeric" placeholder="minutos" style="flex:1"><button class="btn small" data-a="salvarBike" style="min-height:48px">Salvar bike</button></div>
     <div class="chips">${[15, 20, 30, 40].map(m => chip('bikeRap', `data-m="${m}"`, m + ' min', false, 'var(--lime)')).join('')}</div></div>`;
+  if (D.treinos.length) h += D.treinos.map(t => `<div class="card hlo">${sec('Treino registrado na conversa', (D.conv ? fmt(D.conv) + ' séries' : '') + (t.esforco ? ' · esforço ' + t.esforco : ''))}
+    ${(Array.isArray(t.exercicios) ? t.exercicios : []).map(e => `<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(e.exercicio || e.nome || '?')}</span><span class="small muted" style="text-align:right">${esc([(e.series ? e.series + 'x' : '') + (e.repeticoes ?? e.reps ?? ''), e.carga_kg != null ? e.carga_kg + ' kg' : '', e.elastico || ''].filter(Boolean).join(' · '))}</span></div>`).join('')}
+    ${t.descricao || t.observacoes ? `<span class="small muted">${esc(t.descricao || t.observacoes)}</span>` : ''}</div>`).join('');
   if (!P.itens.length) {
-    h += `<div class="card"><div class="empty">${P.modelo ? 'Modelo sem exercícios ainda.' : 'Sem treino marcado neste dia (descanso).'}</div>
+    if (!D.treinos.length) h += `<div class="card"><div class="empty">${P.modelo ? 'Modelo sem exercícios ainda.' : 'Sem treino marcado neste dia (descanso).'}</div>
       ${P.modelo ? `<button class="btn ghost" data-go="modelo/${P.modelo.id}">${ic('pencil')} Montar o ${esc(P.modelo.nome)}</button>` : ''}</div>`;
   } else {
     h += `<div class="sec"><b>${P.modelo ? esc((P.modelo.letra ? P.modelo.letra + ' · ' : '') + P.modelo.nome) : 'Core'}${P.core && P.modelo && !/core/i.test(P.modelo.nome) ? ' + core' : ''}</b><span>${D.feitas}/${P.total} séries</span></div>${bar(D.feitas, P.total, 'var(--prot)', 1)}`;
