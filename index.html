@@ -516,7 +516,7 @@ function agenda(D) {
   const L = [];
   const add = (h, nome, sub, feito, cor) => L.push({ h, nome, sub, feito, cor });
   if (!fds) {
-    add('06:01', 'Pressão + bike', `bike ${fmt(D.bike)}/${metaNum('bike_min_dia', 40)} min`, D.bike > 0 && (D.pressao.length > 0 || iso > '2026-11-06'), 'var(--lime)');
+    add('06:01', 'Bike', `${fmt(D.bike)}/${metaNum('bike_min_dia', 40)} min`, D.bike > 0, 'var(--lime)');
     add('07:40', 'Garrafinha cinza + minoxidil', [2, 5].includes(d) ? 'e tirar o lixo' : '', nRec(3) > 0 && D.tomados.has(1), 'var(--agua)');
     add('08:30', 'Café da manhã', 'sanduba + caneca', temRef(['cafe']), 'var(--prot)');
     add('09:30', 'Garrafa do serviço', '580 ml', nRec(1) >= 1, 'var(--agua)');
@@ -595,26 +595,15 @@ ROTAS.registrar = async () => {
   let h = topo('Registrar');
   const d = dow(iso);
   if (d === 2) {
-    const p = D.peso.find(x => x.oficial) || D.peso[0], m = D.medidas[0], pr = D.pressao[0];
-    h += `<div class="card hlg">${sec('Registro de terça', 'peso oficial, cintura e pressão')}
-      ${p || pr ? `<span class="small muted">Já salvo hoje: ${p ? fmt(p.peso_kg, 2) + ' kg' : ''}${m && m.cintura_cm ? ' · cintura ' + fmt(m.cintura_cm, 1) : ''}${pr ? ' · pressão ' + pr.sistolica + '/' + pr.diastolica : ''}</span>` : ''}
+    const p = D.peso.find(x => x.oficial) || D.peso[0], m = D.medidas[0];
+    h += `<div class="card hlg">${sec('Registro de terça', 'peso oficial e cintura')}
+      ${p ? `<span class="small muted">Já salvo hoje: ${fmt(p.peso_kg, 2) + ' kg'}${m && m.cintura_cm ? ' · cintura ' + fmt(m.cintura_cm, 1) : ''}</span>` : ''}
       <div class="grid2"><div class="fld"><label>Peso (kg)</label><input class="inp" id="tPeso" inputmode="decimal" placeholder="89,6"></div>
         <div class="fld"><label>Cintura (cm)</label><input class="inp" id="tCint" inputmode="decimal" placeholder="102"></div></div>
-      <div class="grid3"><div class="fld"><label>Pressão máx.</label><input class="inp" id="tSis" inputmode="numeric" placeholder="12 ou 120"></div>
-        <div class="fld"><label>Pressão mín.</label><input class="inp" id="tDia" inputmode="numeric" placeholder="8 ou 80"></div>
-        <div class="fld"><label>Batimento</label><input class="inp" id="tBat" inputmode="numeric" placeholder="70"></div></div>
       <button class="btn" data-a="salvarTerca">Salvar terça</button></div>`;
     if (primeiraTerca(iso)) h += `<div class="card hlp">${sec('Medidas do mês', '1ª terça · coxa e braço ESQUERDOS')}
       <div class="grid2">${[['quadril_cm', 'Quadril'], ['coxa_cm', 'Coxa E'], ['braco_cm', 'Braço E'], ['peito_cm', 'Peito'], ['pescoco_cm', 'Pescoço']].map(([k, n]) => `<div class="fld"><label>${n} (cm)</label><input class="inp" id="m_${k}" inputmode="decimal" value="${m && m[k] ? fmt(m[k], 1) : ''}"></div>`).join('')}</div>
       <button class="btn p" data-a="salvarMedidas">Salvar medidas</button>${m && m.gordura_pct ? `<span class="small muted">Gordura (US Navy): ${fmt(m.gordura_pct, 1)}%</span>` : ''}</div>`;
-  } else if (!eFds(iso) && iso <= '2026-11-06') {
-    const pr = D.pressao[0];
-    h += `<div class="card hl">${sec('Pressão', 'todo dia útil até 06/11')}
-      ${pr ? `<span class="small" style="color:var(--agua)">✓ ${pr.sistolica}/${pr.diastolica}${pr.batimento ? ' · ' + pr.batimento + ' bpm' : ''} às ${horaLocal(pr.data_hora)}</span>` : ''}
-      <div class="grid3"><div class="fld"><label>Máx.</label><input class="inp" id="tSis" inputmode="numeric" placeholder="12"></div>
-        <div class="fld"><label>Mín.</label><input class="inp" id="tDia" inputmode="numeric" placeholder="8"></div>
-        <div class="fld"><label>Batimento</label><input class="inp" id="tBat" inputmode="numeric" placeholder="70"></div></div>
-      <button class="btn c" data-a="salvarPressao">Salvar pressão</button></div>`;
   }
   // água
   const aM = metaAgua(iso);
@@ -710,19 +699,6 @@ A.diarB = async el => {
   const k = el.dataset.k, v = (S.D.diario || {})[k];
   await salvarDiario({ [k]: v === true ? false : true }); render();
 };
-const pressaoN = v => { const n = num(v); return n == null ? null : n < 30 ? Math.round(n * 10) : Math.round(n); };
-async function gravarPressao() {
-  const s = pressaoN($('tSis').value), d = pressaoN($('tDia').value), b = num($('tBat').value);
-  if (!s && !d) return null;
-  if (!s || !d) throw new Error('Preencha a máxima e a mínima');
-  const { data, error } = await sb.from('pressao').insert({ data_hora: agoraNoDia(S.dia), sistolica: s, diastolica: d, batimento: b ? Math.round(b) : null, observacoes: 'registrado pelo app' }).select('id').single();
-  if (error) throw error;
-  return { id: data.id, txt: s + '/' + d };
-}
-A.salvarPressao = async () => {
-  const r = await gravarPressao(); if (!r) return toast('Preencha a pressão');
-  vibrar(); toast('✓ Pressão ' + r.txt, () => sb.from('pressao').delete().eq('id', r.id)); render();
-};
 async function ultimoPescoco() {
   const { data } = await sb.from('medidas_corporais').select('pescoco_cm').not('pescoco_cm', 'is', null).order('data', { ascending: false }).limit(1);
   return data && data[0] ? +data[0].pescoco_cm : null;
@@ -750,7 +726,6 @@ A.salvarTerca = async () => {
     feito.push(fmt(kg, 2) + ' kg');
   }
   if (cint) { await gravarMedidas({ cintura_cm: cint }); feito.push('cintura ' + fmt(cint, 1)); }
-  const pr = await gravarPressao(); if (pr) feito.push('pressão ' + pr.txt);
   if (!feito.length) return toast('Preencha pelo menos um campo');
   vibrar(); toast('✓ ' + feito.join(' · '));
   if (kg) { const mh = await sb.from('metas_historico').select('*').is('visto_em', null).order('id', { ascending: false }).limit(1); S.metasNovas = (mh.data && mh.data[0]) || null;
@@ -1139,7 +1114,7 @@ function cardLembretes() {
   const sup = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const st = !sup ? 'indisponivel' : Notification.permission === 'denied' ? 'bloqueado' : (S.pushOn ? 'on' : 'off');
   return `<div class="card">${sec('Lembretes no celular', st === 'on' ? 'ligados' : 'desligados')}
-    <span class="small muted">Só fora do horário de serviço: pressão e bike 6h, água, vitaminas, treino, check-in 22h27. Feriado e folga seguem a regra do fim de semana.</span>
+    <span class="small muted">Só fora do horário de serviço: bike 6h, água, vitaminas, treino, check-in 22h27. Feriado e folga seguem a regra do fim de semana.</span>
     ${st === 'indisponivel' ? '<span class="small muted">Este navegador não aceita notificações. Abra pelo ícone do app no Chrome.</span>'
       : st === 'bloqueado' ? '<span class="small muted">As notificações estão bloqueadas. Libere em Configurações › Apps › Chrome › Notificações.</span>'
       : st === 'on' ? '<div class="grid2"><button class="btn small" data-a="pushTeste">Mandar teste</button><button class="btn small ghost" data-a="pushOff">Desligar</button></div>'
